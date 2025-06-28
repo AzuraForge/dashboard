@@ -1,24 +1,29 @@
-// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/NewExperiment.jsx ==========
+// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/NewExperiment.jsx (TAM VE NİHAİ HALİ) ==========
 import { useState, useEffect } from 'react';
 import { startNewExperiment, fetchAvailablePipelines } from '../services/api';
 
+// Kullanıcıya daha iyi geri bildirim vermek için bir bileşen
 const Feedback = ({ message, type }) => {
   if (!message) return null;
   return <p className={`feedback ${type}`}>{message}</p>;
 };
 
 function NewExperiment({ onExperimentStarted }) {
-  const [pipelines, setPipelines] = useState([]);
-  const [selectedPipelineId, setSelectedPipelineId] = useState('');
-  const [selectedPipelineDetails, setSelectedPipelineDetails] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [feedback, setFeedback] = useState(null);
+  // State tanımlamaları
+  const [pipelines, setPipelines] = useState([]); // API'dan gelen tüm pipeline'lar
+  const [selectedPipelineId, setSelectedPipelineId] = useState(''); // Seçili pipeline'ın ID'si
+  const [selectedPipelineDetails, setSelectedPipelineDetails] = useState(null); // Seçili pipeline'ın tam detayları
+  const [isLoading, setIsLoading] = useState(true); // Yüklenme durumu
+  const [feedback, setFeedback] = useState(null); // Kullanıcı geri bildirimi
 
+  // --- Pipeline listesini API'dan çek ---
+  // Bileşen ilk yüklendiğinde, mevcut tüm pipeline'ları ve konfigürasyonlarını API'dan çek
   useEffect(() => {
     const loadPipelines = async () => {
       try {
         const response = await fetchAvailablePipelines();
         setPipelines(response.data);
+        // Eğer pipeline varsa, ilkini varsayılan olarak seç
         if (response.data.length > 0) {
           const firstPipeline = response.data[0];
           setSelectedPipelineId(firstPipeline.id);
@@ -32,8 +37,9 @@ function NewExperiment({ onExperimentStarted }) {
       }
     };
     loadPipelines();
-  }, []);
+  }, []); // Boş dizi, bu etkinin sadece bir kez çalışmasını sağlar
 
+  // --- Form Gönderimi ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedPipelineId) {
@@ -44,37 +50,33 @@ function NewExperiment({ onExperimentStarted }) {
     setIsLoading(true);
     setFeedback(null);
     
-    // --- KRİTİK DÜZELTME: Config nesnesini doğru oluştur ---
-    // Worker'daki pipeline'ın beklediği tüm varsayılan konfigürasyonu burada oluşturuyoruz.
+    // Sadece pipeline_name'i gönderiyoruz. Diğer konfigürasyonlar Worker'daki varsayılanlardan alınacak.
     const configToSend = {
       pipeline_name: selectedPipelineId,
-      data_sourcing: { // pipeline.py'deki get fonksiyonu bunları kullanıyor
-        ticker: "AAPL", 
-        start_date: "2023-01-01" // Varsayılan tarih
-      },
-      training_params: { // pipeline.py'deki get fonksiyonu bunları kullanıyor
-        epochs: 10,
-        lr: 0.01
-      }
+      // Dashboard'dan ek parametre göndermek istersek buraya ekleyeceğiz:
+      // data_sourcing: { ticker: "MSFT" },
+      // training_params: { epochs: 10 }
     };
     
     try {
       const response = await startNewExperiment(configToSend);
       const taskId = response.data.task_id;
-      setFeedback({ type: 'success', message: `Görev gönderildi! ID: ${taskId}` });
+      setFeedback({ type: 'success', message: `Görev başarıyla gönderildi! ID: ${taskId}` });
       
+      // Görev başladıktan sonra canlı takip ekranına geç
       if (onExperimentStarted && taskId) {
         onExperimentStarted(taskId);
       }
       
     } catch (err) {
-      setFeedback({ type: 'error', message: 'Deney başlatılamadı.' });
+      setFeedback({ type: 'error', message: 'Deney başlatılamadı. API ve Worker loglarını kontrol edin.' });
       console.error("Error starting experiment:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // --- Render (Görünüm) ---
   if (isLoading) return <p>Pipeline'lar yükleniyor...</p>;
   if (pipelines.length === 0) return <p className="error">Platforma kurulu ve keşfedilmiş pipeline eklentisi bulunamadı.</p>;
 
@@ -112,3 +114,6 @@ function NewExperiment({ onExperimentStarted }) {
     </form>
   );
 }
+
+// --- EKSİK OLAN SATIR ---
+export default NewExperiment;
