@@ -1,5 +1,5 @@
 # ========== DOSYA: dashboard/Dockerfile ==========
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -12,4 +12,4 @@ RUN npm install
 COPY . .
 
 # Vite geliştirme sunucusunu başlat
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
