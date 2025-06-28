@@ -1,4 +1,4 @@
-// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/ExperimentsList.jsx ==========
+// ========== DOSYA: dashboard/src/components/ExperimentsList.jsx ==========
 import { useState, useEffect } from 'react';
 import { fetchExperiments } from '../services/api';
 
@@ -14,17 +14,18 @@ function ExperimentsList() {
         setExperiments(response.data);
         setError(null);
       } catch (err) {
-        setError('API sunucusuna bağlanılamadı.');
+        setError('API sunucusuna bağlanılamadı. Servisin çalıştığından emin olun.');
+        console.error(err);
       } finally {
-        if (loading) setLoading(false);
+        if (loading) setLoading(false); // Sadece ilk yüklemede loading'i kapat
       }
     };
     
-    getExperiments();
-    const intervalId = setInterval(getExperiments, 5000); 
+    getExperiments(); // İlk yüklemede çalıştır
+    const intervalId = setInterval(getExperiments, 5000); // Her 5 saniyede bir veriyi yenile
     
-    return () => clearInterval(intervalId);
-  }, [loading]); // `loading`'i bağımlılık dizisine ekledim, bu daha doğru bir kullanım
+    return () => clearInterval(intervalId); // Bileşen kaldırıldığında interval'i temizle
+  }, [loading]); // 'loading' state'i değiştiğinde effect'i yeniden çalıştır
 
   if (loading) return <p>Deneyler yükleniyor...</p>;
   if (error) return <p className="error">{error}</p>;
@@ -37,6 +38,9 @@ function ExperimentsList() {
           <tr>
             <th>Deney ID</th>
             <th>Durum</th>
+            <th>Pipeline</th>
+            <th>Sembol</th>
+            <th>Kayıp</th>
           </tr>
         </thead>
         <tbody>
@@ -44,6 +48,9 @@ function ExperimentsList() {
             <tr key={exp.id}>
               <td className="exp-id">{exp.id}</td>
               <td><span className={`status-badge status-${exp.status?.toLowerCase() || 'unknown'}`}>{exp.status || 'Bilinmiyor'}</span></td>
+              <td>{exp.pipeline_name || exp.pipeline || 'N/A'}</td> {/* pipeline_name veya pipeline */}
+              <td>{exp.ticker || 'N/A'}</td>
+              <td>{exp.final_loss !== undefined && exp.final_loss !== null ? exp.final_loss.toFixed(6) : 'N/A'}</td>
             </tr>
           ))}
         </tbody>
@@ -52,5 +59,4 @@ function ExperimentsList() {
   );
 }
 
-// --- EKSİK OLAN SATIR ---
 export default ExperimentsList;
