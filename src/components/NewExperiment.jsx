@@ -1,185 +1,103 @@
-// ========== DOSYA: dashboard/src/components/NewExperiment.jsx (TAM VE NİHAİ HALİ) ==========
-
+// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/NewExperiment.jsx ==========
 import { useState, useEffect } from 'react';
 import { startNewExperiment, fetchAvailablePipelines } from '../services/api';
 
-// Kullanıcıya daha iyi geri bildirim vermek için bir bileşen
 const Feedback = ({ message, type }) => {
-  if (!message) return null;
-  return <p className={`feedback ${type}`}>{message}</p>;
+    if (!message) return null;
+    return <p className={`feedback ${type}`}>{message}</p>;
 };
-
-// Formu render etmek için bir bileşen
-const ConfigForm = ({ config, onConfigChange }) => {
-  if (!config) return null;
-
-  // Konfigürasyonun temel bölümlerini dinamik olarak işle
-  const handleInputChange = (section, key, value) => {
-    // Gelen değerin tipini korumaya çalış (sayısal veya metin)
-    const originalValue = config[section][key];
-    const newValue = typeof originalValue === 'number' ? parseFloat(value) || 0 : value;
-    onConfigChange(section, key, newValue);
-  };
-
-  return (
-    <>
-      {config.data_sourcing && (
-        <div className="config-section">
-          <h3>Veri Kaynağı</h3>
-          <div className="form-group">
-            <label htmlFor="ticker">Hisse Senedi Kodu (Ticker)</label>
-            <input
-              id="ticker"
-              type="text"
-              value={config.data_sourcing.ticker}
-              onChange={(e) => handleInputChange('data_sourcing', 'ticker', e.target.value.toUpperCase())}
-            />
-          </div>
-           <div className="form-group">
-            <label htmlFor="start_date">Başlangıç Tarihi</label>
-            <input
-              id="start_date"
-              type="text"
-              value={config.data_sourcing.start_date}
-              onChange={(e) => handleInputChange('data_sourcing', 'start_date', e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-      
-      {config.training_params && (
-        <div className="config-section">
-          <h3>Eğitim Parametreleri</h3>
-          <div className="form-group">
-            <label htmlFor="epochs">Epoch Sayısı</label>
-            <input
-              id="epochs"
-              type="number"
-              value={config.training_params.epochs}
-              onChange={(e) => handleInputChange('training_params', 'epochs', e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="lr">Öğrenme Oranı (Learning Rate)</label>
-            <input
-              id="lr"
-              type="number"
-              step="0.001"
-              value={config.training_params.lr}
-              onChange={(e) => handleInputChange('training_params', 'lr', e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-    </>
-  );
-};
-
 
 function NewExperiment({ onExperimentStarted }) {
-  // State tanımlamaları
-  const [availablePipelines, setAvailablePipelines] = useState({});
-  const [selectedPipeline, setSelectedPipeline] = useState('');
-  const [currentConfig, setCurrentConfig] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [feedback, setFeedback] = useState(null);
+    const [pipelines, setPipelines] = useState([]); // Artık bir dizi
+    const [selectedPipelineId, setSelectedPipelineId] = useState('');
+    const [config, setConfig] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [feedback, setFeedback] = useState(null);
 
-  // --- Veri Çekme ---
-  // Bileşen ilk yüklendiğinde, mevcut tüm pipeline'ları ve konfigürasyonlarını API'dan çek
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const response = await fetchAvailablePipelines();
-        const pipelinesData = response.data;
-        setAvailablePipelines(pipelinesData);
+    useEffect(() => {
+        const loadPipelines = async () => {
+            try {
+                const response = await fetchAvailablePipelines();
+                setPipelines(response.data); // Gelen diziyi state'e ata
+                if (response.data.length > 0) {
+                    const firstPipeline = response.data[0];
+                    setSelectedPipelineId(firstPipeline.id);
+                    // Varsayılan konfigürasyonu oluştur
+                    setConfig({
+                        pipeline_name: firstPipeline.id,
+                        data_sourcing: { ticker: "AAPL", start_date: "2023-01-01" },
+                        training_params: { epochs: 10, lr: 0.01 }
+                    });
+                }
+            } catch (error) {
+                setFeedback({ type: 'error', message: 'Pipeline listesi yüklenemedi.' });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadPipelines();
+    }, []);
 
-        // API'dan veri geldiyse, ilk pipeline'ı varsayılan olarak seç
-        const firstPipelineName = Object.keys(pipelinesData)[0];
-        if (firstPipelineName) {
-          setSelectedPipeline(firstPipelineName);
-          setCurrentConfig(pipelinesData[firstPipelineName]);
+    const handleConfigChange = (section, key, value) => {
+        const newConfig = { ...config, [section]: { ...config[section], [key]: value } };
+        setConfig(newConfig);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setFeedback(null);
+        try {
+            const response = await startNewExperiment(config);
+            setFeedback({ type: 'success', message: `Görev gönderildi! ID: ${response.data.task_id}` });
+            setTimeout(onExperimentStarted, 2000);
+        } catch (err) {
+            setFeedback({ type: 'error', message: 'Deney başlatılamadı.' });
+        } finally {
+            setIsLoading(false);
         }
-      } catch (error) {
-        setFeedback({ type: 'error', message: 'Pipeline konfigürasyonları API\'dan yüklenemedi.' });
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
     };
-    loadInitialData();
-  }, []); // Boş dizi, bu etkinin sadece bir kez çalışmasını sağlar
 
-  // --- Olay Yöneticileri (Event Handlers) ---
-  const handlePipelineChange = (e) => {
-    const newPipelineName = e.target.value;
-    setSelectedPipeline(newPipelineName);
-    // Seçim değiştiğinde, state'deki konfigürasyonu güncelle
-    setCurrentConfig(availablePipelines[newPipelineName]);
-  };
+    if (isLoading) return <p>Pipeline'lar yükleniyor...</p>;
+    if (pipelines.length === 0) return <p className="error">Kurulu pipeline eklentisi bulunamadı.</p>;
 
-  const handleConfigChange = (section, key, value) => {
-    // Konfigürasyonun bir kopyasını oluşturarak state'i güncelle (Immutability)
-    const newConfig = {
-      ...currentConfig,
-      [section]: {
-        ...currentConfig[section],
-        [key]: value,
-      },
-    };
-    setCurrentConfig(newConfig);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setFeedback(null);
-    
-    try {
-      // API'a gönderilecek olan, state'deki güncel konfigürasyondur
-      const response = await startNewExperiment(currentConfig);
-      setFeedback({ type: 'success', message: `Görev başarıyla gönderildi! ID: ${response.data.task_id}` });
-      setTimeout(onExperimentStarted, 2000); // 2 sn sonra liste sekmesine otomatik geç
-    } catch (err) {
-      setFeedback({ type: 'error', message: 'Deney başlatılamadı. API ve Worker loglarını kontrol edin.' });
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // --- Render (Görünüm) ---
-  if (isLoading && !currentConfig) {
-    return <p>Pipeline'lar yükleniyor...</p>;
-  }
-
-  if (!selectedPipeline) {
-    return <p className="error">Kurulu ve keşfedilmiş bir pipeline eklentisi bulunamadı.</p>
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="form-container">
-      <h2>Yeni Deney Başlat</h2>
-      
-      <div className="form-group">
-        <label htmlFor="pipeline">Çalıştırılacak Pipeline Eklentisi</label>
-        <select id="pipeline" value={selectedPipeline} onChange={handlePipelineChange}>
-          {Object.keys(availablePipelines).map(name => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
-      </div>
-      
-      <div className="config-grid">
-        <ConfigForm config={currentConfig} onConfigChange={handleConfigChange} />
-      </div>
-      
-      <button type="submit" disabled={isLoading} className="button-primary">
-        {isLoading ? 'Başlatılıyor...' : 'Eğitimi Başlat'}
-      </button>
-      
-      <Feedback message={feedback?.message} type={feedback?.type} />
-    </form>
-  );
+    return (
+        <form onSubmit={handleSubmit} className="form-container">
+            <h2>Yeni Deney Başlat</h2>
+            <div className="form-group">
+                <label htmlFor="pipeline">Pipeline Eklentisi</label>
+                <select id="pipeline" value={selectedPipelineId} onChange={(e) => setSelectedPipelineId(e.target.value)}>
+                    {pipelines.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                </select>
+            </div>
+            {config && (
+                <div className="config-grid">
+                    <div className="config-section">
+                        <h3>Veri Kaynağı</h3>
+                        <div className="form-group">
+                            <label htmlFor="ticker">Hisse Senedi Kodu</label>
+                            <input id="ticker" type="text" value={config.data_sourcing.ticker}
+                                onChange={e => handleConfigChange('data_sourcing', 'ticker', e.target.value.toUpperCase())} />
+                        </div>
+                    </div>
+                    <div className="config-section">
+                        <h3>Eğitim Parametreleri</h3>
+                        <div className="form-group">
+                            <label htmlFor="epochs">Epoch Sayısı</label>
+                            <input id="epochs" type="number" value={config.training_params.epochs}
+                                onChange={e => handleConfigChange('training_params', 'epochs', parseInt(e.target.value, 10))} />
+                        </div>
+                    </div>
+                </div>
+            )}
+            <button type="submit" disabled={isLoading} className="button-primary">
+                {isLoading ? 'Başlatılıyor...' : 'Eğitimi Başlat'}
+            </button>
+            <Feedback message={feedback?.message} type={feedback?.type} />
+        </form>
+    );
 }
 
 export default NewExperiment;
