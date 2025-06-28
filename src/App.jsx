@@ -1,4 +1,4 @@
-// ========== DOSYA: dashboard/src/App.jsx ==========
+// ========== DOSYA: src/App.jsx ==========
 import { useState } from 'react';
 import './App.css';
 import ExperimentsList from './components/ExperimentsList';
@@ -7,10 +7,9 @@ import NewExperiment from './components/NewExperiment';
 function App() {
   const [activeTab, setActiveTab] = useState('list');
 
-  // Bu fonksiyon, bir deney başlatıldıktan sonra listeyi yenilemek için kullanılacak
   const refreshAndSwitchToList = () => {
     setActiveTab('list');
-    // ExperimentsList bileşeni kendi verisini zaten periyodik olarak çekiyor olacak.
+    // ExperimentsList bileşeni kendi kendini yenilediği için ekstra bir şey yapmaya gerek yok
   };
 
   return (
