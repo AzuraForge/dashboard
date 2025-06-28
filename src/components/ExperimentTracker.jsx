@@ -9,7 +9,14 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 function ExperimentTracker({ taskId }) {
   const [status, setStatus] = useState(null); 
-  const [chartData, setChartData] = useState({ labels: [], datasets: [] }); 
+  const [chartData, setChartData] = useState({ 
+    labels: [], 
+    datasets: [{ 
+      label: 'Eğitim Kaybı', data: [], 
+      borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)',
+      tension: 0.1, fill: false
+    }] 
+  }); 
   const ws = useRef(null); 
 
   useEffect(() => {
@@ -18,6 +25,7 @@ function ExperimentTracker({ taskId }) {
       return;
     }
 
+    // Önceki bağlantıyı temizle (varsa)
     if (ws.current) { ws.current.close(); }
     
     // Geçmiş verilerini ve durumu sıfırla
@@ -28,15 +36,13 @@ function ExperimentTracker({ taskId }) {
     }]});
     setStatus({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
 
+
     const wsUrl = `ws://localhost:8000/ws/task_status/${taskId}`;
     ws.current = new WebSocket(wsUrl);
 
-    ws.current.onopen = () => { console.log(`WebSocket connected for task ${taskId}`); };
-    ws.current.onerror = (error) => {
-      console.error("WebSocket Error:", error);
-      setStatus({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
+    ws.current.onopen = () => {
+        console.log(`WebSocket connected for task ${taskId}`);
     };
-    ws.current.onclose = () => { console.log(`WebSocket disconnected for task ${taskId}`); };
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -48,6 +54,7 @@ function ExperimentTracker({ taskId }) {
           const epoch = data.details.epoch;
           const loss = data.details.loss;
 
+          // Eğer veri gelmişse ve epoch daha önce eklenmemişse ekle
           if (!prevData.labels.includes(`Epoch ${epoch}`)) {
             return {
               labels: [...prevData.labels, `Epoch ${epoch}`],
@@ -57,18 +64,28 @@ function ExperimentTracker({ taskId }) {
               }]
             };
           }
-          return prevData;
+          return prevData; // Zaten eklenmişse değişiklik yapma
         });
       }
     };
+    
+    ws.current.onerror = (error) => {
+      console.error("WebSocket Error:", error);
+      setStatus({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
+    };
 
+    ws.current.onclose = () => {
+      console.log(`WebSocket disconnected for task ${taskId}`);
+    };
+
+    // Bileşen DOM'dan kaldırıldığında WebSocket bağlantısını temizle
     return () => {
       if (ws.current) {
         ws.current.close();
-        ws.current = null;
+        ws.current = null; // Ref'i temizle
       }
     };
-  }, [taskId]); 
+  }, [taskId]); // Sadece taskId değiştiğinde yeniden bağlan
 
   const progressPercent = status?.details?.total_epochs 
     ? (status.details.epoch / status.details.total_epochs) * 100
@@ -103,7 +120,7 @@ function ExperimentTracker({ taskId }) {
           }} />
         </div>
       )}
-      {chartData.labels.length === 0 && status?.state === 'PROGRESS' && <p>Grafik verisi bekleniyor (ilk epoch tamamlandığında görünecektir)...</p>}
+      {chartData.labels.length === 0 && (status?.state === 'PROGRESS' || status?.state === 'CONNECTING') && <p>Grafik verisi bekleniyor (ilk epoch tamamlandığında görünecektir)...</p>}
     </div>
   );
 }
