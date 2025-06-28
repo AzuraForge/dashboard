@@ -1,8 +1,6 @@
 // ========== GÜNCELLENECEK DOSYA: dashboard/src/services/api.js ==========
-
 import axios from 'axios';
 
-// API sunucumuzun adresini merkezi bir yerden alıyoruz
 const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 const apiClient = axios.create({
@@ -12,36 +10,22 @@ const apiClient = axios.create({
   },
 });
 
-/**
- * Tüm tamamlanmış/çalışan deney görevlerini API'dan çeker.
- */
 export const fetchExperiments = () => {
-  return apiClient.get('/experiments/');
+  // Bu, /api/v1/experiments adresine istek atar
+  return apiClient.get('/experiments');
 };
 
-/**
- * Yeni bir deneyi başlatmak için API'a istek gönderir.
- * @param {object} config - Deney konfigürasyonu
- */
 export const startNewExperiment = (config) => {
-  return apiClient.post('/experiments/', config);
+  // Bu, /api/v1/experiments adresine POST isteği atar
+  return apiClient.post('/experiments', config);
 };
 
-// --- YENİ EKLENEN FONKSİYON ---
-/**
- * Platformda kurulu ve keşfedilmiş tüm pipeline'ları ve varsayılan 
- * konfigürasyonlarını API'dan çeker.
- */
 export const fetchAvailablePipelines = () => {
-  // Bu, API'da oluşturduğumuz yeni '/pipelines' endpoint'ine istek atar.
-  return apiClient.get('/experiments/pipelines');
+  // Bu, /api/v1/pipelines adresine istek atar
+  return apiClient.get('/pipelines');
 };
 
-// --- API'mızda Task Durumunu Sorgulamak İçin Eklediğimiz Fonksiyonlar ---
-/**
- * Belirli bir görevin durumunu sorgular.
- * @param {string} taskId - Celery görev ID'si
- */
 export const getTaskStatus = (taskId) => {
+  // Bu, /api/v1/experiments/{taskId}/status adresine istek atar
   return apiClient.get(`/experiments/${taskId}/status`);
 };
