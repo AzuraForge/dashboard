@@ -5,88 +5,70 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend
 } from 'chart.js';
 
-// Chart.js bileşenlerini kaydet
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function ExperimentTracker({ taskId }) {
-  const [status, setStatus] = useState(null); // Görevin genel durumu (PENDING, PROGRESS, SUCCESS, FAILURE)
-  const [chartData, setChartData] = useState({ labels: [], datasets: [] }); // Canlı grafik için veri
-  const ws = useRef(null); // WebSocket bağlantısını tutmak için ref
+  const [status, setStatus] = useState(null); 
+  const [chartData, setChartData] = useState({ labels: [], datasets: [] }); 
+  const ws = useRef(null); 
 
   useEffect(() => {
     if (!taskId) {
-      // taskId yoksa hiçbir şey yapma veya hata göster
       setStatus({ state: 'NO_TASK', details: { status_text: 'Takip edilecek görev ID\'si bulunamadı.' } });
       return;
     }
 
-    // Önceki bağlantıyı temizle (varsa)
-    if (ws.current) {
-      ws.current.close();
-    }
+    if (ws.current) { ws.current.close(); }
     
     // Geçmiş verilerini ve durumu sıfırla
-    setHistory([]); // Bu aslında chartData içinde yönetiliyor
-    setChartData({ labels: [], datasets: [] });
+    setChartData({ labels: [], datasets: [{ 
+        label: 'Eğitim Kaybı', data: [], 
+        borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        tension: 0.1, fill: false
+    }]});
     setStatus({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
-
 
     const wsUrl = `ws://localhost:8000/ws/task_status/${taskId}`;
     ws.current = new WebSocket(wsUrl);
 
-    ws.current.onopen = () => {
-        console.log(`WebSocket connected for task ${taskId}`);
+    ws.current.onopen = () => { console.log(`WebSocket connected for task ${taskId}`); };
+    ws.current.onerror = (error) => {
+      console.error("WebSocket Error:", error);
+      setStatus({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
     };
+    ws.current.onclose = () => { console.log(`WebSocket disconnected for task ${taskId}`); };
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("Received data from WebSocket:", data);
-      setStatus(data); // Genel durumu güncelle
+      setStatus(data);
       
-      // Eğer durum PROGRESS ise ve kayıp (loss) bilgisi varsa, grafiğe ekle
       if(data.state === 'PROGRESS' && data.details?.loss !== undefined) {
         setChartData(prevData => {
           const epoch = data.details.epoch;
           const loss = data.details.loss;
 
-          // Eğer veri gelmişse ve epoch daha önce eklenmemişse ekle
           if (!prevData.labels.includes(`Epoch ${epoch}`)) {
-            const newLabels = [...prevData.labels, `Epoch ${epoch}`];
-            const newLossData = [...(prevData.datasets[0]?.data || []), loss];
             return {
-              labels: newLabels,
+              labels: [...prevData.labels, `Epoch ${epoch}`],
               datasets: [{
-                label: 'Eğitim Kaybı',
-                data: newLossData,
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                tension: 0.1,
-                fill: false
+                ...prevData.datasets[0], // Mevcut dataset özelliklerini koru
+                data: [...prevData.datasets[0].data, loss]
               }]
             };
           }
-          return prevData; // Zaten eklenmişse değişiklik yapma
+          return prevData;
         });
       }
     };
-    
-    ws.current.onerror = (error) => {
-      console.error("WebSocket Error:", error);
-      setStatus({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
-    };
 
-    ws.current.onclose = () => {
-      console.log(`WebSocket disconnected for task ${taskId}`);
-    };
-
-    // Bileşen DOM'dan kaldırıldığında WebSocket bağlantısını temizle
     return () => {
       if (ws.current) {
         ws.current.close();
-        ws.current = null; // Ref'i temizle
+        ws.current = null;
       }
     };
-  }, [taskId]); // Sadece taskId değiştiğinde yeniden bağlan
+  }, [taskId]); 
 
   const progressPercent = status?.details?.total_epochs 
     ? (status.details.epoch / status.details.total_epochs) * 100
@@ -101,7 +83,7 @@ function ExperimentTracker({ taskId }) {
       {status?.state === 'PROGRESS' && (
         <div className="progress-section">
           <p>{status.details.status_text}</p>
-          <progress value={progressPercent} max="100"></progress>
+          <progress value={progressPercent} max="100" style={{width: '100%', height: '25px'}}></progress>
           <p>Mevcut Kayıp (Loss): <strong>{status.details.loss?.toFixed(6) || 'N/A'}</strong></p>
         </div>
       )}
@@ -114,12 +96,10 @@ function ExperimentTracker({ taskId }) {
         <div className="chart-container">
           <h4>Canlı Kayıp Grafiği</h4>
           <Line data={chartData} options={{ 
-            animation: false, // Canlı grafiklerde animasyonu kapatmak akıcılığı artırır
+            animation: false, 
             responsive: true, 
-            maintainAspectRatio: false, // Container boyutuna uyum sağlar
-            scales: {
-                y: { beginAtZero: false } // Y ekseni 0'dan başlamasın
-            }
+            maintainAspectRatio: false, 
+            scales: { y: { beginAtZero: false }}
           }} />
         </div>
       )}
