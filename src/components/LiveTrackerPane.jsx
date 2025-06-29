@@ -5,50 +5,46 @@ import { Chart } from 'chart.js';
 import 'chart.js/auto';
 import { getCssVar } from '../utils/cssUtils';
 
-// Sabit başlangıç durumları
 const initialStatus = { 
   state: 'CONNECTING', 
   details: { status_text: 'Worker\'a bağlanılıyor...' }
 };
 
 function LiveTrackerPane({ taskId, onClose }) {
-  // Tek bir state objesi
   const [liveData, setLiveData] = useState({ 
     status: initialStatus,
-    chart: { labels: [], datasets: [{ data: [] }] } // Başlangıçta boş
+    chart: { labels: [], datasets: [{ data: [] }] }
   });
   
   const socketRef = useRef(null);
   
-  const chartOptions = useMemo(() => {
-    return {
-      responsive: true, maintainAspectRatio: false,
-      animation: { duration: 300, easing: 'linear' },
-      plugins: { 
-        legend: { display: false }, 
-        tooltip: {
-          enabled: true, backgroundColor: getCssVar('--content-bg'),
-          titleColor: getCssVar('--text-color'), bodyColor: getCssVar('--text-color'),
-          borderColor: getCssVar('--border-color'), borderWidth: 1, padding: 10,
-          displayColors: false,
-          callbacks: {
-            title: (ctx) => ctx[0].label,
-            label: (ctx) => `Kayıp: ${ctx.parsed.y.toFixed(6)}`,
-          }
-        },
+  const chartOptions = useMemo(() => ({
+    responsive: true, maintainAspectRatio: false,
+    animation: { duration: 300, easing: 'linear' },
+    plugins: { 
+      legend: { display: false }, 
+      tooltip: {
+        enabled: true, backgroundColor: getCssVar('--content-bg'),
+        titleColor: getCssVar('--text-color'), bodyColor: getCssVar('--text-color'),
+        borderColor: getCssVar('--border-color'), borderWidth: 1, padding: 10,
+        displayColors: false,
+        callbacks: {
+          title: (ctx) => ctx[0].label,
+          label: (ctx) => `Kayıp: ${ctx.parsed.y.toFixed(6)}`,
+        }
       },
-      scales: { 
-        y: { 
-          grid: { color: getCssVar('--border-color'), borderDash: [2, 4], drawTicks: false },
-          ticks: { padding: 10, maxTicksLimit: 5, font: { size: 12 }, color: getCssVar('--text-color-darker') },
-        }, 
-        x: {
-          grid: { display: false },
-          ticks: { padding: 10, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, font: { size: 12 }, color: getCssVar('--text-color-darker') },
-        } 
-      }
-    };
-  }, []);
+    },
+    scales: { 
+      y: { 
+        grid: { color: getCssVar('--border-color'), borderDash: [2, 4], drawTicks: false },
+        ticks: { padding: 10, maxTicksLimit: 5, font: { size: 12 }, color: getCssVar('--text-color-darker') },
+      }, 
+      x: {
+        grid: { display: false },
+        ticks: { padding: 10, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, font: { size: 12 }, color: getCssVar('--text-color-darker') },
+      } 
+    }
+  }), []);
 
   useEffect(() => {
     if (!taskId) return;
@@ -77,16 +73,15 @@ function LiveTrackerPane({ taskId, onClose }) {
       
       setLiveData(prev => {
         let newChart = prev.chart;
+        // DÜZELTME: Veriyi doğrudan 'data.details' objesinden oku
         if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
           const epochLabel = `E${data.details.epoch}`;
-          // Sadece yeni epoch ise grafiğe ekle
           if (!prev.chart.labels.includes(epochLabel)) {
-            const newLabels = [...prev.chart.labels, epochLabel].slice(-30); // Son 30 epoch'u göster
+            const newLabels = [...prev.chart.labels, epochLabel].slice(-30);
             const newLossData = [...prev.chart.datasets[0].data, data.details.loss].slice(-30);
             newChart = { ...prev.chart, labels: newLabels, datasets: [{ ...prev.chart.datasets[0], data: newLossData }] };
           }
         } else if (data.result?.results?.loss) {
-            // Görev bittiğinde tam kayıp geçmişini çiz
           const finalLossHistory = data.result.results.loss;
           newChart = {
             ...prev.chart,
@@ -94,7 +89,6 @@ function LiveTrackerPane({ taskId, onClose }) {
             datasets: [{ ...prev.chart.datasets[0], data: finalLossHistory }]
           };
         }
-        // Hem status'ü hem de chart'ı tek seferde güncelle
         return { status: data, chart: newChart };
       });
     };
@@ -105,9 +99,9 @@ function LiveTrackerPane({ taskId, onClose }) {
     return () => { if (newSocket.readyState === 1) newSocket.close(1000, "Component unmounting"); };
   }, [taskId]);
   
+  // DÜZELTME: Veriyi doğrudan 'liveData.status.details' objesinden oku
   const { state, details, result } = liveData.status;
-  const { pipeline_name } = result?.config || details?.config || {};
-  const { total_epochs, epoch, status_text } = details || {};
+  const { pipeline_name, total_epochs, epoch, status_text } = details || {};
   const progressPercent = (state === 'SUCCESS' || state === 'FAILURE') ? 100 : (total_epochs && epoch ? (epoch / total_epochs) * 100 : 0);
   
   return (
