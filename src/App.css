@@ -188,3 +188,67 @@ table tbody tr.selected-row { background-color: color-mix(in srgb, var(--primary
 }
 .Toastify__progress-bar { background: var(--primary-color) !important; }
 .Toastify__close-button { color: var(--text-color) !important; }
+
+/* ==========================================================================
+   8. YENİ DENEY SAYFASI ÖZEL STİLLERİ
+   ========================================================================== */
+
+.new-experiment-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Ana konteynerin tüm yüksekliği kaplaması için */
+}
+
+.new-experiment-form {
+  flex-grow: 1; /* Kalan tüm alanı kapla */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* İçerik taşmasını engelle */
+  border-radius: var(--border-radius);
+  background-color: var(--content-bg);
+  border: 1px solid var(--border-color);
+}
+
+.form-main-content {
+  flex-grow: 1;
+  overflow-y: auto; /* Sadece bu alan kaydırılabilir olacak */
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.form-action-bar {
+  flex-shrink: 0; /* Bu panelin küçülmesini engelle */
+  padding: 15px 25px;
+  background-color: var(--bg-color);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.pipeline-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-color-darker);
+}
+.pipeline-info span {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Form içindeki iç içe gruplar için daha iyi stiller */
+.form-fieldset {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 0 0 20px 0;
+}
+.form-fieldset legend {
+  padding: 0 10px;
+  font-weight: 600;
+  color: var(--text-color);
+}
