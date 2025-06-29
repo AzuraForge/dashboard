@@ -1,44 +1,35 @@
-// ========== GÜNCELLENECEK DOSYA: dashboard/src/App.jsx (Yeni Ana Layout ve Router) ==========
 import { useState } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import './App.css'; // Yeni stil dosyasını import et
+import './App.css'; 
 
 // Bileşenleri import et
-import ExperimentsList from './components/ExperimentsList'; // Halen kullanılacak (sadece tablo gösterimi için)
 import NewExperiment from './components/NewExperiment';
-import ExperimentTracker from './components/ExperimentTracker';
 import ExperimentDetailPage from './components/ExperimentDetailPage'; 
-import DashboardOverview from './pages/DashboardOverview'; // Yeni Genel Bakış Sayfası
+import DashboardOverview from './pages/DashboardOverview';
+import LiveTrackerPane from './components/LiveTrackerPane'; // YENİ: Canlı takip paneli
 
 function App() {
   const [trackingTaskId, setTrackingTaskId] = useState(null); // Canlı takip edilen görev ID'si
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Yeni bir deney başlatıldığında çağrılacak callback
   const handleExperimentStarted = (taskId) => {
-    // Yeni deney başladığında direkt Tracker sayfasına yönlendirme yapabiliriz.
-    // Ancak ana Dashboard'un otomatik yenilemesi de bu görevi yakalayacaktır.
-    // Şimdilik Tracker sayfasına yönlendirme mantığını koruyalım,
-    // ancak DashboardOverview'da anlık listeleme zaten yapılacağı için
-    // bu navigasyonun zorunlu olmadığını unutmayalım.
     if (taskId) {
-        setTrackingTaskId(taskId); // Takip edilecek görevi ayarla
-        navigate(`/tracker/${taskId}`); // Canlı takip sayfasına yönlendir
+        setTrackingTaskId(taskId); // SADECE state'i güncelle, yönlendirme yok!
     }
   };
+  
+  const handleCloseTracker = () => {
+    setTrackingTaskId(null); // Takip panelini kapat
+  };
 
-  // Aktif link stilini belirlemek için yardımcı fonksiyon
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/' || location.pathname === '/experiments';
-    if (path === '/tracker' && location.pathname.startsWith('/tracker/')) return true;
-    if (path === '/experiments' && location.pathname.startsWith('/experiments/')) return true;
+    if (path === '/experiments' && (location.pathname === '/' || location.pathname.startsWith('/experiments'))) return true;
     return location.pathname === path;
   };
 
   return (
-    <div className="app-layout"> {/* Yeni ana layout div'i */}
-      {/* Sidebar */}
+    <div className="app-layout">
       <aside className="sidebar">
         <h2>AzuraForge</h2>
         <nav>
@@ -53,23 +44,20 @@ function App() {
                 <span role="img" aria-label="rocket">🚀</span> Yeni Deney Başlat
               </Link>
             </li>
-            {/* Eğer bir görev takip ediliyorsa veya tracker sayfasındaysak canlı takip sekmesini göster */}
-            {trackingTaskId && (
-              <li>
-                <Link to={`/tracker/${trackingTaskId}`} className={isActive('/tracker') ? 'active' : ''}>
-                  <span role="img" aria-label="satellite">🛰️</span> Canlı Takip
-                </Link>
-              </li>
-            )}
-            {/* Diğer menü öğeleri (Uygulama Kataloğu, Model Kaydı vb.) buraya eklenebilir */}
           </ul>
         </nav>
       </aside>
 
-      {/* Ana İçerik */}
       <main className="main-content">
+        {/* YENİ: Canlı takip paneli burada, rotaların üstünde render edilecek */}
+        {trackingTaskId && (
+          <LiveTrackerPane 
+            taskId={trackingTaskId} 
+            onClose={handleCloseTracker} 
+          />
+        )}
+      
         <Routes>
-          {/* Ana sayfa "/experiments" ile aynı içeriği göstersin */}
           <Route path="/" element={<DashboardOverview 
             onExperimentSelect={(id) => navigate(`/experiments/${id}`)} 
             onNewExperimentClick={() => navigate('/new-experiment')}
@@ -79,8 +67,8 @@ function App() {
             onNewExperimentClick={() => navigate('/new-experiment')}
           />} />
           <Route path="/new-experiment" element={<NewExperiment onExperimentStarted={handleExperimentStarted} />} />
-          <Route path="/tracker/:taskId" element={<ExperimentTracker />} />
           <Route path="/experiments/:experimentId" element={<ExperimentDetailPage />} />
+          {/* /tracker/:taskId rotası kaldırıldı */}
         </Routes>
       </main>
     </div>

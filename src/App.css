@@ -521,3 +521,79 @@ progress::-moz-progress-bar {
     padding: 20px;
   }
 }
+
+/* Live Tracker Pane Stilleri */
+.live-tracker-pane {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  margin-bottom: 25px;
+  background-color: #ffffff;
+  border: 1px solid #42b983; /* Yeşil çerçeve */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+}
+
+.live-tracker-pane .close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #888;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+.live-tracker-pane .close-button:hover {
+  color: #333;
+}
+
+.live-tracker-pane .tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.live-tracker-pane .tracker-header h4 {
+  margin: 0;
+  font-size: 1.3em;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.live-tracker-pane .tracker-header .tracker-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.live-tracker-pane .tracker-body {
+  display: flex;
+  gap: 20px;
+}
+
+.live-tracker-pane .tracker-progress {
+  flex: 1;
+}
+
+.live-tracker-pane .tracker-chart {
+  flex: 2;
+  height: 120px; /* Panel içindeki grafik yüksekliği */
+}
+
+.live-tracker-pane .chart-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  color: #6c757d;
+  font-style: italic;
+}

@@ -1,8 +1,7 @@
-// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/ExperimentsList.jsx (Prop Tabanlı) ==========
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
-function ExperimentsList({ experiments }) { // Sadece experiments prop'unu alıyoruz
+function ExperimentsList({ experiments }) {
   if (!experiments || experiments.length === 0) return <p className="feedback info">Henüz gösterilecek bir deney bulunamadı.</p>;
 
   return (
@@ -15,10 +14,11 @@ function ExperimentsList({ experiments }) { // Sadece experiments prop'unu alıy
             <th>Pipeline</th>
             <th>Sembol</th>
             <th>Kayıp</th>
-            <th>Bitiş Tarihi</th> {/* Yeni sütun */}
+            <th>Bitiş Tarihi</th>
           </tr>
         </thead>
         <tbody>
+          {/* DÜZELTME: map fonksiyonu doğrudan tr döndürüyor, arada boşluk yok */}
           {experiments.map((exp) => (
             <tr key={exp.id}>
               <td className="exp-id clickable-cell">
@@ -30,7 +30,7 @@ function ExperimentsList({ experiments }) { // Sadece experiments prop'unu alıy
               <td>{exp.config?.pipeline_name || exp.pipeline_name || 'N/A'}</td>
               <td>{exp.config?.data_sourcing?.ticker || exp.ticker || 'N/A'}</td>
               <td>{exp.final_loss !== undefined && exp.final_loss !== null ? exp.final_loss.toFixed(6) : 'N/A'}</td>
-              <td>{exp.completed_at ? new Date(exp.completed_at).toLocaleString() : 'N/A'}</td> {/* Tarih formatlama */}
+              <td>{exp.completed_at ? new Date(exp.completed_at).toLocaleString() : 'N/A'}</td>
             </tr>
           ))}
         </tbody>
@@ -39,7 +39,6 @@ function ExperimentsList({ experiments }) { // Sadece experiments prop'unu alıy
   );
 }
 
-// Prop tiplerini belirleyelim
 ExperimentsList.propTypes = {
   experiments: PropTypes.array.isRequired,
 };
