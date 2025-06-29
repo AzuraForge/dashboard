@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import './App.css'; 
 
-// Bileşenleri import et
 import NewExperiment from './components/NewExperiment';
-import ExperimentDetailPage from './components/ExperimentDetailPage'; 
+// ExperimentDetailPage import'u kaldırıldı
 import DashboardOverview from './pages/DashboardOverview';
 import LiveTrackerPane from './components/LiveTrackerPane';
 
@@ -60,15 +59,13 @@ function App() {
       
         <Routes>
           <Route path="/" element={<DashboardOverview 
-            onExperimentSelect={(id) => navigate(`/experiments/${id}`)} 
             onNewExperimentClick={() => navigate('/new-experiment')}
           />} />
           <Route path="/experiments" element={<DashboardOverview 
-            onExperimentSelect={(id) => navigate(`/experiments/${id}`)} 
             onNewExperimentClick={() => navigate('/new-experiment')}
           />} />
           <Route path="/new-experiment" element={<NewExperiment onExperimentStarted={handleExperimentStarted} />} />
-          <Route path="/experiments/:experimentId" element={<ExperimentDetailPage />} />
+          {/* /experiments/:experimentId rotası kaldırıldı */}
         </Routes>
       </main>
     </div>

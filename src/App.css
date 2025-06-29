@@ -272,3 +272,37 @@ table tr:last-child td { border-bottom: none; }
 .clickable-cell a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
 .clickable-cell a:hover { text-decoration: underline; }
 .exp-id { font-family: monospace; color: var(--text-color-darker); }
+
+/* Detaylı Görünüm Stilleri */
+
+.expanded-row-content {
+  display: flex;
+  gap: 25px;
+  padding: 25px;
+  background-color: var(--bg-color); /* Tablo başlığı ile aynı renk */
+  border-top: 1px solid var(--border-color);
+}
+.detail-section {
+  flex: 1;
+  min-width: 0;
+}
+.detail-section h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--primary-color);
+  font-size: 1.1em;
+}
+.code-block {
+  background-color: #0f172a; /* Ana arkaplanla aynı */
+  border: 1px solid var(--border-color);
+  padding: 15px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 0.9em;
+  max-height: 300px;
+}
+.detail-chart-container {
+    height: 250px;
+    margin-bottom: 20px;
+}
