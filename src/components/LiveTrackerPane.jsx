@@ -6,6 +6,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function LiveTrackerPane({ taskId, onClose }) {
+  // DÜZELTME: State değişkeni adı 'statusData', set fonksiyonu 'setStatusData'
   const [statusData, setStatusData] = useState({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
   const [chartData, setChartData] = useState({ labels: [], datasets: [{ label: 'Loss', data: [] }] });
   const ws = useRef(null);
@@ -13,10 +14,8 @@ function LiveTrackerPane({ taskId, onClose }) {
   useEffect(() => {
     if (!taskId) return;
 
-    setStatus({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
-    setCurrentLoss('N/A');
-    setPipelineName('');
-    setTicker('');
+    // DÜZELTME: State'i setStatusData ile başlat
+    setStatusData({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
     setChartData({
       labels: [],
       datasets: [{
@@ -33,11 +32,8 @@ function LiveTrackerPane({ taskId, onClose }) {
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      setStatus(data);
-
-      const config = data.details?.config || data.result?.config || {};
-      setPipelineName(config.pipeline_name || pipelineName);
-      setTicker(config.data_sourcing?.ticker || ticker);
+      // DÜZELTME: State'i setStatusData ile güncelle
+      setStatusData(data);
       
       const updateChart = (newLoss, newEpoch) => {
         setChartData(prev => {
@@ -53,14 +49,9 @@ function LiveTrackerPane({ taskId, onClose }) {
       };
 
       if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
-        setCurrentLoss(data.details.loss.toFixed(6));
         updateChart(data.details.loss, data.details.epoch);
       } else if (data.ready || data.state === 'SUCCESS' || data.state === 'FAILURE') {
         const finalResult = data.result || {};
-        const finalLoss = finalResult.results?.final_loss ?? (finalResult.results?.loss?.[finalResult.results.loss.length - 1]);
-        setCurrentLoss(finalLoss !== undefined ? finalLoss.toFixed(6) : (data.state === 'FAILURE' ? 'Hata!' : 'N/A'));
-        
-        // Eğer tüm loss geçmişi geldiyse, grafiği onunla doldur
         if (finalResult.results?.loss && Array.isArray(finalResult.results.loss)) {
             const losses = finalResult.results.loss;
             const labels = Array.from({ length: losses.length }, (_, i) => `E${i + 1}`);
@@ -72,16 +63,23 @@ function LiveTrackerPane({ taskId, onClose }) {
       }
     };
 
-    ws.current.onerror = () => setStatus({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
+    ws.current.onerror = () => {
+        // DÜZELTME: State'i setStatusData ile güncelle
+        setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
+    };
+    
     ws.current.onclose = () => {
-      setStatus(prev => {
+      // DÜZELTME: State'i setStatusData ile güncelle
+      setStatusData(prev => {
         if (prev?.state === 'SUCCESS' || prev?.state === 'FAILURE' || prev?.state === 'ERROR') return prev;
         return { ...prev, state: 'DISCONNECTED', details: { status_text: `Bağlantı kesildi.` } };
       });
     };
 
     return () => {
-      if (ws.current) ws.current.close();
+      if (ws.current) {
+        ws.current.close();
+      }
     };
   }, [taskId]);
   
@@ -100,18 +98,24 @@ function LiveTrackerPane({ taskId, onClose }) {
   }
 
   let progressPercent = 0;
-  if (state === 'SUCCESS') progressPercent = 100;
-  else if (details?.total_epochs) progressPercent = ((details.epoch || 0) / details.total_epochs) * 100;
+  if (state === 'SUCCESS') {
+    progressPercent = 100;
+  } else if (details?.total_epochs) {
+    progressPercent = ((details.epoch || 0) / details.total_epochs) * 100;
+  }
 
   let statusText = 'İlerleme durumu bekleniyor...';
-  if (state === 'SUCCESS') statusText = 'Eğitim başarıyla tamamlandı!';
-  else if (details?.status_text) statusText = details.status_text;
-
+  if (state === 'SUCCESS') {
+    statusText = 'Eğitim başarıyla tamamlandı!';
+  } else if (details?.status_text) {
+    statusText = details.status_text;
+  }
+  
   return (
     <div className="live-tracker-pane">
       <button className="close-button" onClick={onClose} aria-label="Kapat">×</button>
       <div className="tracker-header">
-        <h4><span role="img" aria-label="satellite">🛰️</span> Canlı Takip: {pipelineName} {ticker && `(${ticker})`}</h4>
+        <h4><span role="img" aria-label="satellite">🛰️</span> Canlı Takip: {pipelineName || "Yükleniyor..."} {ticker && `(${ticker})`}</h4>
         <div className="tracker-info">
             <span className="exp-id">ID: {taskId}</span>
             <span className={`status-badge status-${state?.toLowerCase()}`}>{state || 'Bilinmiyor'}</span>
