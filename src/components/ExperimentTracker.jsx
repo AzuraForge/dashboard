@@ -82,6 +82,23 @@ function ExperimentTracker() {
         } else {
             setCurrentLoss('N/A');
         }
+
+        // Eğer başarılı olduysa ve tam loss history varsa grafiği onunla güncelle
+        if (data.state === 'SUCCESS' && data.result?.loss && Array.isArray(data.result.loss)) {
+            const losses = data.result.loss;
+            const labels = Array.from({ length: losses.length }, (_, i) => `Epoch ${i + 1}`);
+            setChartData({
+                labels: labels,
+                datasets: [{
+                    label: 'Eğitim Kaybı',
+                    data: losses,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    tension: 0.1,
+                    fill: false
+                }]
+            });
+        }
       }
     };
     

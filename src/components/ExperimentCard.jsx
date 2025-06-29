@@ -2,6 +2,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import { Line } from 'react-chartjs-2'; // Grafik bileşeni
+
+// Chart.js bileşenlerini kaydet
+import {
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend
+} from 'chart.js';
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function ExperimentCard({ experiment, onSelect }) {
   const navigate = useNavigate();
@@ -10,12 +17,31 @@ function ExperimentCard({ experiment, onSelect }) {
   const [currentLoss, setCurrentLoss] = useState(experiment.final_loss);
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState(experiment.status || "Bilgi bekleniyor...");
+  const [chartData, setChartData] = useState({ labels: [], datasets: [] });
   const ws = useRef(null); // WebSocket bağlantısını tutmak için ref
 
   useEffect(() => {
     // Sadece çalışan veya henüz başlamış deneyler için WebSocket bağlantısı kur
     const isLiveStatus = (status) => status === 'STARTED' || status === 'PROGRESS';
     let cleanupNeeded = false;
+
+    // İlk yüklemede ve experiment.id değiştiğinde sıfırlama yap
+    setCurrentStatus(experiment.status);
+    setCurrentLoss(experiment.final_loss);
+    setProgress(experiment.status === 'SUCCESS' ? 100 : 0);
+    setStatusText(experiment.status || "Bilgi bekleniyor...");
+    setChartData({ // Grafiği sıfırla
+        labels: [], 
+        datasets: [{ 
+            label: 'Eğitim Kaybı', 
+            data: [], 
+            borderColor: 'rgb(75, 192, 192)', 
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            tension: 0.1, 
+            fill: false 
+        }] 
+    });
+
 
     if (isLiveStatus(experiment.status)) { // İlk render'da statüye göre karar ver
       cleanupNeeded = true;
@@ -40,12 +66,43 @@ function ExperimentCard({ experiment, onSelect }) {
             setProgress(((data.details.epoch || 0) / data.details.total_epochs) * 100);
           }
           setStatusText(data.details?.status_text || `Epoch ${data.details?.epoch}/${data.details?.total_epochs}`);
+          
+          setChartData(prevData => {
+            const epoch = data.details.epoch;
+            const loss = data.details.loss;
+
+            if (loss !== undefined && epoch !== undefined) {
+                // Sadece yeni bir epoch kaydı geldiyse ekle
+                if (!prevData.labels.includes(`Epoch ${epoch}`)) {
+                    return {
+                        labels: [...prevData.labels, `Epoch ${epoch}`],
+                        datasets: [{
+                            ...prevData.datasets[0], 
+                            data: [...(prevData.datasets[0]?.data || []), loss]
+                        }]
+                    };
+                }
+            }
+            return prevData;
+        });
+
         } else if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
-          // Görev tamamlandığında veya başarısız olduğunda son durumu ve sonucu al
+          // Görev bittiğinde (SUCCESS, FAILURE vb.) son durumu ve sonucu al
           if (data.result?.final_loss !== undefined) {
              setCurrentLoss(data.result.final_loss);
           } else if (data.result?.loss && Array.isArray(data.result.loss)) { // Eğitim geçmişindeki son kayıp
              setCurrentLoss(data.result.loss[data.result.loss.length - 1]);
+             setChartData(prevData => { // Tüm geçmişi grafik için yükle
+                const losses = data.result.loss;
+                const labels = Array.from({ length: losses.length }, (_, i) => `Epoch ${i + 1}`);
+                return {
+                    labels: labels,
+                    datasets: [{
+                        ...prevData.datasets[0], 
+                        data: losses
+                    }]
+                };
+             });
           }
           
           if (data.state === 'SUCCESS') setProgress(100);
@@ -82,10 +139,26 @@ function ExperimentCard({ experiment, onSelect }) {
       };
     } else {
         // Eğer deney başlangıçta tamamlanmış veya başarısız durumdaysa, WebSocket kurmaya gerek yok
+        // Ve tamamlannış veriyi yükle
         setCurrentStatus(experiment.status);
         setCurrentLoss(experiment.final_loss);
         setProgress(experiment.status === 'SUCCESS' ? 100 : 0);
         setStatusText(experiment.status);
+        if (experiment.results?.loss && Array.isArray(experiment.results.loss)) {
+            const losses = experiment.results.loss;
+            const labels = Array.from({ length: losses.length }, (_, i) => `Epoch ${i + 1}`);
+            setChartData({
+                labels: labels,
+                datasets: [{
+                    label: 'Eğitim Kaybı',
+                    data: losses,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    tension: 0.1,
+                    fill: false
+                }]
+            });
+        }
     }
 
     // Bileşen DOM'dan kaldırıldığında WebSocket bağlantısını temizle
@@ -95,7 +168,7 @@ function ExperimentCard({ experiment, onSelect }) {
         ws.current = null;
       }
     };
-  }, [experiment.id, experiment.status, experiment.final_loss]); // Deney verileri değiştiğinde yeniden bağlan
+  }, [experiment.id, experiment.status, experiment.final_loss, experiment.results]); // Deney verileri değiştiğinde yeniden bağlan
 
   const handleCardClick = () => {
     navigate(`/experiments/${experiment.id}`); // Doğrudan yönlendir
@@ -115,15 +188,32 @@ function ExperimentCard({ experiment, onSelect }) {
         <span className={`status-badge status-${currentStatus?.toLowerCase()}`}>{currentStatus || 'Bilinmiyor'}</span>
       </p>
       
-      {(currentStatus === 'STARTED' || currentStatus === 'PROGRESS') && (
+      {(currentStatus === 'STARTED' || currentStatus === 'PROGRESS' || currentStatus === 'CONNECTED') && (
         <div className="progress-section">
           <p>{statusText}</p>
           <progress value={progress} max="100"></progress>
-          <p>Kayıp: <strong>{currentLoss !== undefined && currentLoss !== null ? currentLoss.toFixed(6) : 'N/A'}</strong></p>
+          <p>Mevcut Kayıp: <strong>{currentLoss !== undefined && currentLoss !== null ? currentLoss.toFixed(6) : 'N/A'}</strong></p>
         </div>
       )}
       {(currentStatus === 'SUCCESS' || currentStatus === 'FAILURE' || currentStatus === 'ERROR' || currentStatus === 'DISCONNECTED') && (
         <p>Son Kayıp: <strong>{currentLoss !== undefined && currentLoss !== null ? currentLoss.toFixed(6) : 'N/A'}</strong></p>
+      )}
+
+      {/* Mini Grafik */}
+      {chartData.labels.length > 0 && (
+          <div className="mini-chart-container" style={{ height: '150px', width: '100%', marginTop: '15px' }}>
+              <Line data={chartData} options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false }, title: { display: false }, tooltip: { enabled: false } },
+                  scales: {
+                      x: { display: false },
+                      y: { display: false, beginAtZero: false }
+                  },
+                  animation: false, // Canlı grafik için animasyonu kapat
+                  elements: { point: { radius: 0 } } // Noktaları gizle
+              }} />
+          </div>
       )}
     </div>
   );

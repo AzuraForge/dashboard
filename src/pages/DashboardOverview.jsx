@@ -16,17 +16,18 @@ function DashboardOverview({ onExperimentSelect, onNewExperimentClick }) {
         const response = await fetchExperiments();
         // API'den gelen veriye göre sıralama: Önce çalışanlar, sonra en yeni tamamlananlar
         const sortedExperiments = response.data.sort((a, b) => {
-          const statusOrder = { 'STARTED': 1, 'PROGRESS': 2, 'FAILURE': 3, 'SUCCESS': 4, 'UNKNOWN': 5 };
-          const aStatus = statusOrder[a.status] || 5;
-          const bStatus = statusOrder[b.status] || 5;
+          const statusOrder = { 'STARTED': 1, 'PROGRESS': 2, 'FAILURE': 3, 'SUCCESS': 4, 'UNKNOWN': 5, 'DISCONNECTED': 6 }; // DISCONNECTED'ı da ekleyelim
+          const aStatus = statusOrder[a.status] || 7; // Varsayılan değer unknown/diğer durumlar için
+          const bStatus = statusOrder[b.status] || 7;
 
           if (aStatus !== bStatus) {
             return aStatus - bStatus; // Duruma göre sırala (STARTED en üstte)
           }
 
           // Aynı durumdaki deneyleri en yeni bitiş tarihine göre sırala (varsa)
-          const aDate = a.completed_at ? new Date(a.completed_at) : new Date(0);
-          const bDate = b.completed_at ? new Date(b.completed_at) : new Date(0);
+          // `completed_at` yoksa `started_at` veya `id` (timestamp içerdiği için) kullanabiliriz
+          const aDate = a.completed_at ? new Date(a.completed_at) : (a.started_at ? new Date(a.started_at) : new Date(0));
+          const bDate = b.completed_at ? new Date(b.completed_at) : (b.started_at ? new Date(b.started_at) : new Date(0));
           return bDate.getTime() - aDate.getTime(); // En yeni tamamlanan üstte
         });
 
@@ -41,7 +42,7 @@ function DashboardOverview({ onExperimentSelect, onNewExperimentClick }) {
     };
     
     getExperiments();
-    const intervalId = setInterval(getExperiments, 5000); // Deneyleri düzenli olarak yenile
+    const intervalId = setInterval(getExperiments, 5000); // Deneyleri düzenli olarak yenile (5 saniyede bir)
     
     return () => clearInterval(intervalId); // Bileşen kaldırıldığında interval'i temizle
   }, []);
@@ -50,7 +51,7 @@ function DashboardOverview({ onExperimentSelect, onNewExperimentClick }) {
     exp.status === 'STARTED' || exp.status === 'PROGRESS'
   );
   const completedOrFailedExperiments = experiments.filter(exp => 
-    exp.status === 'SUCCESS' || exp.status === 'FAILURE'
+    exp.status === 'SUCCESS' || exp.status === 'FAILURE' || exp.status === 'ERROR' || exp.status === 'DISCONNECTED' || exp.status === 'UNKNOWN'
   );
 
   return (

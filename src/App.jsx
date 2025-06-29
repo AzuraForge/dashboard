@@ -17,6 +17,11 @@ function App() {
 
   // Yeni bir deney başlatıldığında çağrılacak callback
   const handleExperimentStarted = (taskId) => {
+    // Yeni deney başladığında direkt Tracker sayfasına yönlendirme yapabiliriz.
+    // Ancak ana Dashboard'un otomatik yenilemesi de bu görevi yakalayacaktır.
+    // Şimdilik Tracker sayfasına yönlendirme mantığını koruyalım,
+    // ancak DashboardOverview'da anlık listeleme zaten yapılacağı için
+    // bu navigasyonun zorunlu olmadığını unutmayalım.
     if (taskId) {
         setTrackingTaskId(taskId); // Takip edilecek görevi ayarla
         navigate(`/tracker/${taskId}`); // Canlı takip sayfasına yönlendir
