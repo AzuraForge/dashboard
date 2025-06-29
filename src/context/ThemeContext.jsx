@@ -1,31 +1,28 @@
-import { createContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { createContext, useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 
 export const ThemeContext = createContext();
 
-export function ThemeProvider({ children, setupChartDefaults }) {
+export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     return savedTheme || (prefersDark ? 'dark' : 'light');
   });
 
-  const applyTheme = useCallback((currentTheme) => {
-    const body = document.body;
-    body.classList.toggle('light-theme', currentTheme === 'light');
-    localStorage.setItem('theme', currentTheme);
-    // Tema CSS'i uygulandıktan sonra Chart.js'i güncelle
-    setTimeout(() => setupChartDefaults(currentTheme), 0);
-  }, [setupChartDefaults]);
-
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme, applyTheme]);
+    const body = document.body;
+    // body'nin class'ını mevcut temaya göre ayarla
+    body.classList.toggle('light-theme', theme === 'light');
+    // Seçimi tarayıcı hafızasına kaydet
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
+  // Sadece theme ve toggleTheme'i dışarıya veriyoruz.
   const value = useMemo(() => ({ theme, toggleTheme }), [theme]);
 
   return (
@@ -34,4 +31,7 @@ export function ThemeProvider({ children, setupChartDefaults }) {
     </ThemeContext.Provider>
   );
 }
-ThemeProvider.propTypes = { children: PropTypes.node.isRequired, setupChartDefaults: PropTypes.func.isRequired };
+
+ThemeProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};

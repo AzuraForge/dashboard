@@ -6,10 +6,13 @@ const MoonIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 
 function ThemeToggle() {
   const { theme, toggleTheme } = useContext(ThemeContext);
+
   return (
     <button onClick={toggleTheme} className="theme-toggle-button" title="Temayı Değiştir">
       {theme === 'light' ? <MoonIcon /> : <SunIcon />}
     </button>
   );
 }
+
+// DÜZELTME: Eksik olan 'export default' satırı eklendi.
 export default ThemeToggle;
