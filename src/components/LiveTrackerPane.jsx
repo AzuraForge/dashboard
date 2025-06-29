@@ -1,99 +1,125 @@
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
+import 'chart.js/auto'; // Chart.js'in tüm bileşenleri otomatik kaydetmesini sağlar
+import annotationPlugin from 'chartjs-plugin-annotation';
+import { Chart } from 'chart.js';
 
-// Bu bileşen için bir kerelik, boş bir başlangıç durumu.
-const initialChartData = {
-  labels: [],
-  datasets: [{
-    label: 'Eğitim Kaybı', data: [], borderColor: 'var(--primary-color)',
-    backgroundColor: 'color-mix(in srgb, var(--primary-color) 20%, transparent)',
-    tension: 0.1, fill: true, pointRadius: 2,
-  }]
-};
+// Anotasyon eklentisini kaydet
+Chart.register(annotationPlugin);
 
 function LiveTrackerPane({ taskId, onClose }) {
   const [statusData, setStatusData] = useState({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
-  const [chartData, setChartData] = useState(initialChartData);
+  const [chartData, setChartData] = useState({ labels: [], datasets: [{ data: [] }] });
   
-  // WebSocket nesnesini saklamak için ref. StrictMode'un çift render'ından etkilenmez.
+  // Ping animasyonu için state
+  const [pingAnnotation, setPingAnnotation] = useState(null);
+  
+  // WebSocket nesnesini saklamak için ref (BİLEŞENİN İÇİNDE)
   const socketRef = useRef(null);
   
   const chartOptions = {
-    animation: false, responsive: true, maintainAspectRatio: false,
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 400,
+      easing: 'easeInOutQuad',
+    },
     plugins: { 
       legend: { display: false }, 
-      tooltip: { enabled: true, backgroundColor: 'var(--content-bg)', borderColor: 'var(--border-color)' } 
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'var(--content-bg)',
+        borderColor: 'var(--border-color)',
+        borderWidth: 1,
+        padding: 10,
+        titleFont: { weight: 'bold' },
+        bodyFont: { size: 14 },
+        displayColors: false,
+        callbacks: {
+          label: (context) => `Kayıp: ${context.parsed.y.toFixed(6)}`,
+        }
+      },
+      annotation: {
+        animations: {
+          numbers: {
+            properties: ['radius'],
+            duration: 1000,
+          }
+        },
+        annotations: {
+          ...(pingAnnotation && { ping: pingAnnotation })
+        }
+      }
     },
     scales: { 
-      y: { beginAtZero: false, ticks: { maxTicksLimit: 5 } }, 
-      x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7 } } 
+      y: { 
+        beginAtZero: false,
+        grid: { color: 'var(--border-color)', borderDash: [2, 4] },
+        ticks: { maxTicksLimit: 5, font: { size: 10 } },
+      }, 
+      x: {
+        grid: { display: false },
+        ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7, font: { size: 10 } },
+      } 
     }
   };
 
   useEffect(() => {
-    // taskId yoksa hiçbir şey yapma.
     if (!taskId) return;
 
-    // Her yeni taskId için state'leri sıfırla.
     setStatusData({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
-    setChartData(initialChartData);
+    setChartData({
+      labels: [],
+      datasets: [{
+        label: 'Eğitim Kaybı', data: [], borderColor: 'var(--primary-color)',
+        backgroundColor: 'color-mix(in srgb, var(--primary-color) 20%, transparent)',
+        pointBackgroundColor: 'var(--primary-color)', pointBorderColor: 'var(--text-inverse)',
+        pointHoverBackgroundColor: 'var(--text-inverse)', pointHoverBorderColor: 'var(--primary-color)',
+        pointRadius: 3, pointHoverRadius: 6, tension: 0.3, fill: true, borderWidth: 2,
+      }]
+    });
 
-    // --- YENİ ve SAĞLAM BAĞLANTI MANTIĞI ---
+    const socket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
+    socketRef.current = socket;
     
-    // Eğer zaten bir bağlantı varsa (StrictMode'un önceki render'ından kalma olabilir), önce onu kapat.
-    if (socketRef.current) {
-      socketRef.current.close();
-    }
-
-    // Yeni WebSocket nesnesini oluştur ve ref'e ata.
-    const newSocket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
-    socketRef.current = newSocket;
-
-    newSocket.onopen = () => {
-      // Sadece 'CONNECTING' durumundaysa 'CONNECTED'a geçir.
-      // Bu, hızlı gelen mesajların state'i ezmesini önler.
-      setStatusData(prev => prev.state === 'CONNECTING' ? { ...prev, state: 'CONNECTED', details: { status_text: 'Veri bekleniyor...' } } : prev);
-    };
-
-    newSocket.onmessage = (event) => {
+    socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      setStatusData(data); // Gelen veri ile state'i tamamen güncelle
-
-      let finalLossHistory = null;
+      setStatusData(data);
 
       if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
         setChartData(prev => {
           const epochLabel = `E${data.details.epoch}`;
           if (prev.labels.includes(epochLabel)) return prev;
-          const newLabels = [...prev.labels, epochLabel].slice(-50);
-          const newLossData = [...prev.datasets[0].data, data.details.loss].slice(-50);
+          
+          const newLabels = [...prev.labels, epochLabel].slice(-30);
+          const newLossData = [...prev.datasets[0].data, data.details.loss].slice(-30);
+          
+          setPingAnnotation({
+            type: 'point', xValue: epochLabel, yValue: data.details.loss,
+            radius: 15, backgroundColor: 'color-mix(in srgb, var(--primary-color) 25%, transparent)',
+            borderColor: 'var(--primary-color)', borderWidth: 2, borderDash: [6, 6]
+          });
+          setTimeout(() => setPingAnnotation(null), 1000);
+
           return { ...prev, datasets: [{ ...prev.datasets[0], data: newLossData }], labels: newLabels };
         });
       } else if (data.result?.results?.loss) {
-        finalLossHistory = data.result.results.loss;
-      }
-
-      if (finalLossHistory) {
+        const finalLossHistory = data.result.results.loss;
         setChartData(prev => {
           const newLabels = Array.from({ length: finalLossHistory.length }, (_, i) => `E${i + 1}`);
           return { ...prev, labels: newLabels, datasets: [{ ...prev.datasets[0], data: finalLossHistory }] };
         });
       }
     };
-
-    newSocket.onerror = () => {
-      setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
-    };
-
-    // Temizleme fonksiyonu
+    
+    socket.onerror = () => { setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } }); };
+    socket.onclose = () => { setStatusData(prev => (['SUCCESS', 'FAILURE', 'ERROR'].includes(prev.state)) ? prev : { ...prev, state: 'DISCONNECTED' }); };
+    
     return () => {
-      // Bileşen unmount olduğunda (veya StrictMode temizliğinde),
-      // o anki render döngüsünde oluşturulan 'newSocket' nesnesini kapat.
-      // Bu, her zaman doğru referansı kapatmayı garanti eder.
-      newSocket.close(1000, "Component unmounting");
+      socket.close(1000, "Component unmounting");
     };
-  }, [taskId]); // Bu useEffect SADECE taskId değiştiğinde çalışır.
+  }, [taskId]);
   
   const { state, details, result } = statusData;
   const { pipeline_name, data_sourcing } = details?.config || result?.config || {};
