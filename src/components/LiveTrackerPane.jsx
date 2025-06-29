@@ -2,11 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
 
+// Bu bileşen için bir kerelik, boş bir başlangıç durumu.
+const initialChartData = {
+  labels: [],
+  datasets: [{
+    label: 'Eğitim Kaybı', data: [], borderColor: 'var(--primary-color)',
+    backgroundColor: 'color-mix(in srgb, var(--primary-color) 20%, transparent)',
+    tension: 0.1, fill: true, pointRadius: 2,
+  }]
+};
+
 function LiveTrackerPane({ taskId, onClose }) {
   const [statusData, setStatusData] = useState({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
-  const [chartData, setChartData] = useState({ labels: [], datasets: [{ data: [] }] });
+  const [chartData, setChartData] = useState(initialChartData);
   
-  const ws = useRef(null);
+  // WebSocket nesnesini saklamak için ref. StrictMode'un çift render'ından etkilenmez.
+  const socketRef = useRef(null);
   
   const chartOptions = {
     animation: false, responsive: true, maintainAspectRatio: false,
@@ -21,31 +32,37 @@ function LiveTrackerPane({ taskId, onClose }) {
   };
 
   useEffect(() => {
+    // taskId yoksa hiçbir şey yapma.
     if (!taskId) return;
 
+    // Her yeni taskId için state'leri sıfırla.
     setStatusData({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
-    setChartData({
-      labels: [],
-      datasets: [{
-        label: 'Eğitim Kaybı', data: [], borderColor: 'var(--primary-color)',
-        backgroundColor: 'color-mix(in srgb, var(--primary-color) 20%, transparent)',
-        tension: 0.1, fill: true, pointRadius: 2,
-      }]
-    });
+    setChartData(initialChartData);
 
-    const socket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
-    ws.current = socket;
+    // --- YENİ ve SAĞLAM BAĞLANTI MANTIĞI ---
+    
+    // Eğer zaten bir bağlantı varsa (StrictMode'un önceki render'ından kalma olabilir), önce onu kapat.
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
 
-    socket.onmessage = (event) => {
+    // Yeni WebSocket nesnesini oluştur ve ref'e ata.
+    const newSocket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
+    socketRef.current = newSocket;
+
+    newSocket.onopen = () => {
+      // Sadece 'CONNECTING' durumundaysa 'CONNECTED'a geçir.
+      // Bu, hızlı gelen mesajların state'i ezmesini önler.
+      setStatusData(prev => prev.state === 'CONNECTING' ? { ...prev, state: 'CONNECTED', details: { status_text: 'Veri bekleniyor...' } } : prev);
+    };
+
+    newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      setStatusData(data); // Önce genel durumu güncelle
+      setStatusData(data); // Gelen veri ile state'i tamamen güncelle
 
-      // --- ANA DÜZELTME: Veri işleme mantığını tek bir yerde toplama ---
-      
       let finalLossHistory = null;
 
       if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
-        // Canlı veri geliyorsa, grafiği anlık güncelle
         setChartData(prev => {
           const epochLabel = `E${data.details.epoch}`;
           if (prev.labels.includes(epochLabel)) return prev;
@@ -53,34 +70,30 @@ function LiveTrackerPane({ taskId, onClose }) {
           const newLossData = [...prev.datasets[0].data, data.details.loss].slice(-50);
           return { ...prev, datasets: [{ ...prev.datasets[0], data: newLossData }], labels: newLabels };
         });
-      } 
-      // GÖREV BİTTİĞİNDE (SUCCESS veya FAILURE)
-      else if (data.result && data.result.results && data.result.results.loss) {
-        // Eğer görev bittiyse ve sonuçlarda kayıp geçmişi varsa, bu veriyi kullan
+      } else if (data.result?.results?.loss) {
         finalLossHistory = data.result.results.loss;
       }
 
-      // Eğer görev bitti ve 'finalLossHistory' verisi bulunduysa, grafiği son haliyle çiz.
-      // Bu, çok hızlı biten görevlerin bile grafiğinin çizilmesini garanti eder.
       if (finalLossHistory) {
         setChartData(prev => {
           const newLabels = Array.from({ length: finalLossHistory.length }, (_, i) => `E${i + 1}`);
-          return {
-            ...prev,
-            labels: newLabels,
-            datasets: [{ ...prev.datasets[0], data: finalLossHistory }]
-          };
+          return { ...prev, labels: newLabels, datasets: [{ ...prev.datasets[0], data: finalLossHistory }] };
         });
       }
     };
 
-    socket.onerror = () => { setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } }); };
-    socket.onclose = () => { setStatusData(prev => (['SUCCESS', 'FAILURE', 'ERROR'].includes(prev.state)) ? prev : { ...prev, state: 'DISCONNECTED' }); };
-
-    return () => {
-      socket.close();
+    newSocket.onerror = () => {
+      setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
     };
-  }, [taskId]);
+
+    // Temizleme fonksiyonu
+    return () => {
+      // Bileşen unmount olduğunda (veya StrictMode temizliğinde),
+      // o anki render döngüsünde oluşturulan 'newSocket' nesnesini kapat.
+      // Bu, her zaman doğru referansı kapatmayı garanti eder.
+      newSocket.close(1000, "Component unmounting");
+    };
+  }, [taskId]); // Bu useEffect SADECE taskId değiştiğinde çalışır.
   
   const { state, details, result } = statusData;
   const { pipeline_name, data_sourcing } = details?.config || result?.config || {};

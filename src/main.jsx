@@ -1,22 +1,21 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-// GÜNCELLEME: Filler eklentisini Chart'tan import ediyoruz
 import { Chart, Filler } from 'chart.js';
 import { ThemeProvider } from './context/ThemeContext';
 
 // Fontsource paketinden Inter fontunu ve stillerini import et
-import '@fontsource/inter/400.css'; // Regular
-import '@fontsource/inter/500.css'; // Medium
-import '@fontsource/inter/600.css'; // SemiBold
-import '@fontsource/inter/700.css'; // Bold
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
 
 // Stil dosyalarımız
 import './index.css'; 
 import './App.css';
 import App from './App.jsx';
 
-// GÜNCELLEME: Filler eklentisini Chart.js'e kaydediyoruz
+// Gerekli Chart.js eklentilerini kaydet
 Chart.register(Filler);
 
 const setupChartDefaults = (theme = 'dark') => {
@@ -36,9 +35,15 @@ const setupChartDefaults = (theme = 'dark') => {
 setTimeout(() => setupChartDefaults(), 100);
 
 createRoot(document.getElementById('root')).render(
-  <ThemeProvider setupChartDefaults={setupChartDefaults}>
-    <BrowserRouter> 
-      <App />
-    </BrowserRouter>
-  </ThemeProvider>
+  // WebSocket gibi kalıcı bağlantılarla ilgili geliştirme hatalarını önlemek için
+  // StrictMode bilinçli olarak devre dışı bırakılmıştır.
+  // Bu değişikliğin production build'ine bir etkisi yoktur.
+  
+  // <React.StrictMode>
+    <ThemeProvider setupChartDefaults={setupChartDefaults}>
+      <BrowserRouter> 
+        <App />
+      </BrowserRouter>
+    </ThemeProvider>
+  // </React.StrictMode>
 );
