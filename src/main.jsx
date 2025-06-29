@@ -1,7 +1,7 @@
 // ========== GÜNCELLENECEK DOSYA: dashboard/src/main.jsx ==========
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import './index.css';
+import './index.css'; // Global stil dosyanız (varsa)
 import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom'; // BrowserRouter import edildi
 

@@ -1,8 +1,9 @@
 // ========== YENİ DOSYA: dashboard/src/components/ExperimentDetailPage.jsx ==========
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getTaskStatus } from '../services/api'; // API servisinden getTaskStatus'u import ediyoruz
-import { Line } from 'react-chartjs-2'; // Grafik için
+import { getTaskStatus } from '../services/api';
+import { Line } from 'react-chartjs-2';
+import PropTypes from 'prop-types';
 
 // Chart.js bileşenlerini kaydet
 import {
@@ -23,13 +24,13 @@ function ExperimentDetailPage() {
     const fetchExperimentDetails = async () => {
       try {
         setLoading(true);
-        // API'dan experimentId (ki bu aynı zamanda Celery task ID'si) ile detayları çek
         const response = await getTaskStatus(experimentId);
         setExperimentData(response.data);
         setError(null);
 
         // Kayıp grafiği için veriyi hazırla
-        if (response.data.status === 'SUCCESS' && response.data.result?.loss) {
+        // Result objesi içinde loss array'i varsa grafik oluştur
+        if (response.data.status === 'SUCCESS' && response.data.result?.loss && Array.isArray(response.data.result.loss)) {
             const losses = response.data.result.loss;
             const labels = Array.from({ length: losses.length }, (_, i) => `Epoch ${i + 1}`);
             setLossChartData({
@@ -56,31 +57,43 @@ function ExperimentDetailPage() {
     fetchExperimentDetails();
   }, [experimentId]); // experimentId değiştiğinde yeniden veri çek
 
-  if (loading) return <p>Deney detayları yükleniyor...</p>;
-  if (error) return <p className="error">{error}</p>;
-  if (!experimentData) return <p>Deney bulunamadı.</p>;
+  if (loading) return <p className="feedback info">Deney detayları yükleniyor...</p>;
+  if (error) return <p className="feedback error">{error}</p>;
+  if (!experimentData) return <p className="feedback info">Deney bulunamadı veya henüz tamamlanmadı.</p>;
 
-  // API'dan gelen 'result' objesi, worker'dan dönen veriyi içerir.
-  // Bu veri, 'SUCCESS' durumunda final_report_data'nın 'results' alanına denk gelir.
+  // API'dan gelen 'result' objesi, worker'dan dönen nihai veriyi içerir (SUCCESS/FAILURE)
   // 'config' objesi ise doğrudan celery task'ına gönderilen config'tir.
-  const { status, config, result, error: apiError } = experimentData;
+  const { status, config, result } = experimentData;
 
-  const displayResults = status === 'SUCCESS' ? result : (status === 'FAILURE' ? result : null); // Hata durumunda result error mesajını tutabilir
-  const displayError = status === 'FAILURE' ? (apiError || result?.error_message || 'Bilinmeyen Hata') : null;
+  // Hata mesajı ayrı bir alan olarak gelebilir veya result içinde olabilir
+  const displayError = status === 'FAILURE' ? (result?.error_message || result || 'Bilinmeyen Hata') : null;
+  const displayTraceback = status === 'FAILURE' ? result?.traceback : null;
 
   return (
-    <div className="experiment-detail-page">
-      <h2>Deney Detayları: <span className="exp-id">{experimentId}</span></h2>
+    <div className="experiment-detail-page card"> {/* Card stilini uyguladık */}
+      <div className="page-header">
+        <h1><span role="img" aria-label="magnifying glass">🔍</span> Deney Detayları</h1>
+        <p>Seçilen deneyin tüm detaylarını, konfigürasyonunu ve sonuçlarını inceleyin.</p>
+      </div>
+
+      <h3>Genel Bilgiler</h3>
+      <p><strong>Deney ID:</strong> <span className="exp-id">{experimentId}</span></p>
       <p><strong>Durum:</strong> <span className={`status-badge status-${status?.toLowerCase()}`}>{status || 'Bilinmiyor'}</span></p>
-      {displayError && <p className="feedback error">Hata: {displayError}</p>}
+      <p><strong>Pipeline Adı:</strong> {config?.pipeline_name || 'N/A'}</p>
+      <p><strong>Sembol:</strong> {config?.data_sourcing?.ticker || 'N/A'}</p>
+      <p><strong>Başlangıç Zamanı:</strong> {config?.start_time ? new Date(config.start_time).toLocaleString() : 'N/A'}</p> {/* Eğer config içinde start_time varsa */}
+      <p><strong>Bitiş Zamanı:</strong> {experimentData.completed_at ? new Date(experimentData.completed_at).toLocaleString() : 'N/A'}</p>
+      
+
+      {displayError && <p className="feedback error">Deney Hatası: {displayError}</p>}
 
       <h3>Konfigürasyon</h3>
       <pre className="code-block">{JSON.stringify(config, null, 2)}</pre>
 
-      {displayResults && status === 'SUCCESS' && (
+      {status === 'SUCCESS' && (
         <>
           <h3>Sonuçlar</h3>
-          <pre className="code-block">{JSON.stringify(displayResults, null, 2)}</pre>
+          <pre className="code-block">{JSON.stringify(result, null, 2)}</pre>
 
           {lossChartData.labels.length > 0 && (
             <div className="chart-container">
@@ -95,15 +108,20 @@ function ExperimentDetailPage() {
         </>
       )}
 
-      {status === 'FAILURE' && displayResults && displayResults.traceback && (
+      {displayTraceback && (
         <>
-          <h3>Detaylı Hata Mesajı</h3>
-          <pre className="code-block">{displayResults.traceback}</pre>
+          <h3>Detaylı Hata İzleme (Traceback)</h3>
+          <pre className="code-block">{displayTraceback}</pre>
         </>
       )}
 
     </div>
   );
 }
+
+// PropTypes ekleyelim
+ExperimentDetailPage.propTypes = {
+  // experimentId URL parametresinden geldiği için burada propType tanımlamıyoruz
+};
 
 export default ExperimentDetailPage;

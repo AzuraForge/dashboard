@@ -1,12 +1,19 @@
-// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/NewExperiment.jsx (TAM VE NİHAİ HALİ) ==========
+// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/NewExperiment.jsx (PropTypes Eklendi) ==========
 import { useState, useEffect } from 'react';
 import { startNewExperiment, fetchAvailablePipelines } from '../services/api';
+import PropTypes from 'prop-types'; // PropTypes import edildi
 
 // Kullanıcıya daha iyi geri bildirim vermek için bir bileşen
 const Feedback = ({ message, type }) => {
   if (!message) return null;
   return <p className={`feedback ${type}`}>{message}</p>;
 };
+
+Feedback.propTypes = {
+  message: PropTypes.string,
+  type: PropTypes.string.isRequired,
+};
+
 
 function NewExperiment({ onExperimentStarted }) {
   // State tanımlamaları
@@ -77,13 +84,16 @@ function NewExperiment({ onExperimentStarted }) {
   };
 
   // --- Render (Görünüm) ---
-  if (isLoading) return <p>Pipeline'lar yükleniyor...</p>;
-  if (pipelines.length === 0) return <p className="error">Platforma kurulu ve keşfedilmiş pipeline eklentisi bulunamadı.</p>;
+  if (isLoading) return <p className="feedback info">Pipeline'lar yükleniyor...</p>;
+  if (pipelines.length === 0) return <p className="feedback error">Platforma kurulu ve keşfedilmiş pipeline eklentisi bulunamadı.</p>;
 
   return (
-    <form onSubmit={handleSubmit} className="form-container">
-      <h2>Yeni Deney Başlat</h2>
-      
+    <form onSubmit={handleSubmit} className="form-container card"> {/* Card stilini uyguladık */}
+      <div className="page-header">
+        <h1><span role="img" aria-label="rocket">🚀</span> Yeni Deney Başlat</h1>
+        <p>Platformda kurulu mevcut yapay zeka pipeline'larından birini seçerek yeni bir deney başlatın.</p>
+      </div>
+
       <div className="form-group">
         <label htmlFor="pipeline-select">Çalıştırılacak Pipeline Eklentisi</label>
         <select id="pipeline-select" value={selectedPipelineId} onChange={(e) => {
@@ -98,13 +108,15 @@ function NewExperiment({ onExperimentStarted }) {
       </div>
       
       {selectedPipelineDetails && (
-        <div className="pipeline-details">
-          <p><strong>Açıklama:</strong> <i>{selectedPipelineDetails.description}</i></p>
-          <p><strong>Repo:</strong> <a href={selectedPipelineDetails.repository} target="_blank" rel="noopener noreferrer">{selectedPipelineDetails.repository}</a></p>
+        <div className="pipeline-details card">
+          <h3>{selectedPipelineDetails.name} Detayları</h3>
+          <p><strong>Açıklama:</strong> <i>{selectedPipelineDetails.description || 'Açıklama bulunmuyor.'}</i></p>
+          <p><strong>Repository:</strong> <a href={selectedPipelineDetails.repository} target="_blank" rel="noopener noreferrer">{selectedPipelineDetails.repository}</a></p>
+          {/* Gelecekte varsayılan konfigürasyon JSON'unu göstermek/düzenlemek için buraya daha fazla UI eklenebilir */}
         </div>
       )}
 
-      <p>Şimdilik, eğitim varsayılan parametrelerle başlatılacaktır.</p>
+      <p className="feedback info">Şimdilik, eğitim varsayılan parametrelerle başlatılacaktır. Gelecekte bu parametreleri buradan düzenleyebileceksiniz.</p>
 
       <button type="submit" disabled={isLoading} className="button-primary">
         {isLoading ? 'Başlatılıyor...' : `"${selectedPipelineDetails?.name || 'Seçilen'}" Eğitimini Başlat`}
@@ -115,5 +127,8 @@ function NewExperiment({ onExperimentStarted }) {
   );
 }
 
-// --- EKSİK OLAN SATIR ---
+NewExperiment.propTypes = {
+  onExperimentStarted: PropTypes.func.isRequired,
+};
+
 export default NewExperiment;
