@@ -70,10 +70,8 @@ function LiveTrackerPane({ taskId, onClose }) {
     
     newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      
       setLiveData(prev => {
         let newChart = prev.chart;
-        // DÜZELTME: Veriyi doğrudan 'data.details' objesinden oku
         if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
           const epochLabel = `E${data.details.epoch}`;
           if (!prev.chart.labels.includes(epochLabel)) {
@@ -99,16 +97,17 @@ function LiveTrackerPane({ taskId, onClose }) {
     return () => { if (newSocket.readyState === 1) newSocket.close(1000, "Component unmounting"); };
   }, [taskId]);
   
-  // DÜZELTME: Veriyi doğrudan 'liveData.status.details' objesinden oku
   const { state, details, result } = liveData.status;
-  const { pipeline_name, total_epochs, epoch, status_text } = details || {};
+  // DÜZELTME: Pipeline adını önce details'dan, sonra result'tan al.
+  const pipeline_name = details?.pipeline_name || result?.config?.pipeline_name || "Yükleniyor...";
+  const { total_epochs, epoch, status_text } = details || {};
   const progressPercent = (state === 'SUCCESS' || state === 'FAILURE') ? 100 : (total_epochs && epoch ? (epoch / total_epochs) * 100 : 0);
   
   return (
     <div className="live-tracker-pane">
       <button className="close-button" onClick={onClose}>×</button>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-        <h4><span role="img" aria-label="satellite">🛰️</span> Canlı Takip: {pipeline_name || "Yükleniyor..."}</h4>
+        <h4><span role="img" aria-label="satellite">🛰️</span> Canlı Takip: {pipeline_name}</h4>
         <div><span className="exp-id">ID: {taskId.slice(0, 8)}...</span><span className={`status-badge status-${state?.toLowerCase()}`}>{state}</span></div>
       </div>
       <div style={{display: 'flex', gap: '20px', alignItems: 'center'}}>
