@@ -10,7 +10,7 @@ function LiveTrackerPane({ taskId, onClose }) {
   const [chartData, setChartData] = useState({ labels: [], datasets: [{ label: 'Loss', data: [] }] });
   const ws = useRef(null);
 
-  // GÜNCELLEME: Canlı grafik için daha iyi seçenekler
+  // chartOptions sadeleştirildi. Renkler globalden geliyor.
   const chartOptions = {
     animation: false, responsive: true, maintainAspectRatio: false,
     plugins: { 
@@ -24,12 +24,10 @@ function LiveTrackerPane({ taskId, onClose }) {
     scales: { 
         y: { 
           beginAtZero: false, 
-          ticks: { color: 'var(--text-color-darker)', maxTicksLimit: 5 }, // Renk ve tick sayısı
-          grid: { color: 'var(--border-color)' }
+          ticks: { maxTicksLimit: 5 },
         }, 
         x: { 
-          ticks: { color: 'var(--text-color-darker)', maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, 
-          grid: { color: 'var(--border-color)' } 
+          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, 
         } 
     }
   };
@@ -43,11 +41,11 @@ function LiveTrackerPane({ taskId, onClose }) {
         label: 'Eğitim Kaybı', data: [],
         borderColor: 'var(--primary-color)', 
         backgroundColor: 'rgba(66, 185, 131, 0.2)',
-        tension: 0.1, fill: true, // Alanı doldurarak daha dolgun bir görünüm
+        tension: 0.1, fill: true,
         pointRadius: 2,
       }]
     });
-    // ... (WebSocket logic - no change needed here) ...
+    
     const wsUrl = `ws://localhost:8000/ws/task_status/${taskId}`;
     ws.current = new WebSocket(wsUrl);
 
@@ -60,7 +58,6 @@ function LiveTrackerPane({ taskId, onClose }) {
       const updateChart = (newLoss, newEpoch) => {
         setChartData(prev => {
             const epochLabel = `E${newEpoch}`;
-            // YENİ: Grafikte maksimum 50 nokta tut, performansı koru
             const newLabels = [...prev.labels, epochLabel].slice(-50);
             const newData = [...prev.datasets[0].data, newLoss].slice(-50);
 
