@@ -15,22 +15,27 @@ import './index.css';
 import './App.css';
 import App from './App.jsx';
 
-// --- GLOBAL CHART.JS AYARLARI ---
-// Not: Bu ayarlar tema değiştiğinde ThemeContext tarafından güncellenecek
+// --- GÜNCELLENMİŞ GLOBAL CHART.JS AYARLARI ---
 const setupChartDefaults = (theme = 'dark') => {
-  const styles = getComputedStyle(document.body);
-  const textColor = styles.getPropertyValue('--text-color').trim();
-  const textColorDarker = styles.getPropertyValue('--text-color-darker').trim();
-  const borderColor = styles.getPropertyValue('--border-color').trim();
+  try {
+    const styles = getComputedStyle(document.body);
+    const textColorDarker = styles.getPropertyValue('--text-color-darker').trim();
+    const borderColor = styles.getPropertyValue('--border-color').trim();
 
-  Chart.defaults.color = textColorDarker;
-  Chart.defaults.borderColor = borderColor;
-  Chart.defaults.font.family = "'Inter', sans-serif";
-  Chart.overrides.line.plugins.legend.labels.color = textColor;
-  Chart.overrides.line.plugins.title.color = textColor;
+    // Global varsayılanları ayarla. Bu, eksenler, başlıklar ve etiketler dahil tüm metinleri etkiler.
+    Chart.defaults.color = textColorDarker; 
+    Chart.defaults.borderColor = borderColor;
+    Chart.defaults.font.family = "'Inter', sans-serif";
+
+    // Chart.overrides satırları KALDIRILDI. Bu özellik artık Chart.js v4'te mevcut değil.
+    // Yukarıdaki global ayarlar yeterlidir.
+
+  } catch (e) {
+    console.error("Chart.js varsayılanları ayarlanırken bir hata oluştu:", e);
+  }
 };
 
-// İlk yüklemede ayarları yap
+// İlk yüklemede ve tema değişimlerinde çalışacak
 setTimeout(() => setupChartDefaults(), 100);
 
 createRoot(document.getElementById('root')).render(

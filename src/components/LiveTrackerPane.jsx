@@ -5,6 +5,9 @@ import { Line } from 'react-chartjs-2';
 function LiveTrackerPane({ taskId, onClose }) {
   const [statusData, setStatusData] = useState({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
   const [chartData, setChartData] = useState({ labels: [], datasets: [{ label: 'Loss', data: [] }] });
+  
+  // ÖNEMLİ: useRef, StrictMode'un çift render'ından etkilenmez.
+  // Bu yüzden WebSocket nesnesini burada tutmak doğrudur.
   const ws = useRef(null);
 
   const chartOptions = {
@@ -20,7 +23,12 @@ function LiveTrackerPane({ taskId, onClose }) {
   };
 
   useEffect(() => {
-    if (!taskId) return;
+    // Eğer taskId yoksa veya zaten bir bağlantı varsa (StrictMode'un ikinci render'ı gibi), hiçbir şey yapma.
+    if (!taskId) {
+      return;
+    }
+
+    // State'leri sıfırla
     setStatusData({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
     setChartData({
       labels: [],
@@ -31,9 +39,11 @@ function LiveTrackerPane({ taskId, onClose }) {
       }]
     });
     
-    const wsUrl = `ws://localhost:8000/ws/task_status/${taskId}`;
-    ws.current = new WebSocket(wsUrl);
-    ws.current.onmessage = (event) => {
+    // Yeni bir WebSocket bağlantısı oluştur
+    const socket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
+    ws.current = socket; // ref'i güncelle
+
+    socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setStatusData(data);
       if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
@@ -46,11 +56,25 @@ function LiveTrackerPane({ taskId, onClose }) {
         });
       }
     };
-    ws.current.onerror = () => setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
-    ws.current.onclose = () => setStatusData(prev => (prev.state === 'SUCCESS' || prev.state === 'FAILURE') ? prev : { ...prev, state: 'DISCONNECTED' });
-    return () => { if (ws.current) ws.current.close(); };
-  }, [taskId]);
+
+    socket.onerror = () => {
+        setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
+    };
+
+    socket.onclose = () => {
+        setStatusData(prev => (['SUCCESS', 'FAILURE', 'ERROR'].includes(prev.state)) ? prev : { ...prev, state: 'DISCONNECTED' });
+    };
+
+    // --- StrictMode için anahtar temizleme fonksiyonu ---
+    return () => {
+      // Bu useEffect'in temizleme fonksiyonu, sadece bu useEffect içinde oluşturulan
+      // 'socket' nesnesini kapatmalıdır. Bu, StrictMode'un ilk render'dan sonra
+      // doğru bağlantıyı kapatmasını ve ikinci render'ın temiz bir başlangıç yapmasını sağlar.
+      socket.close();
+    };
+  }, [taskId]); // useEffect sadece taskId değiştiğinde yeniden çalışır.
   
+  // Arayüz render mantığı (değişiklik yok)
   const { state, details, result } = statusData;
   const { pipeline_name, data_sourcing } = details?.config || result?.config || {};
   const { total_epochs, epoch, status_text } = details || {};
@@ -67,8 +91,14 @@ function LiveTrackerPane({ taskId, onClose }) {
         <div style={{flex: 1}}><p>{status_text || state}</p><progress value={progressPercent} max="100" style={{width: '100%'}}></progress></div>
         <div style={{flex: 2, height: '100px'}}>{chartData.labels.length > 0 && <Line data={chartData} options={chartOptions} />}</div>
       </div>
+      {state === 'FAILURE' && result?.error_message && <p className="feedback error" style={{marginTop: '15px'}}>{result.error_message}</p>}
     </div>
   );
 }
-LiveTrackerPane.propTypes = { taskId: PropTypes.string.isRequired, onClose: PropTypes.func.isRequired, };
+
+LiveTrackerPane.propTypes = { 
+  taskId: PropTypes.string.isRequired, 
+  onClose: PropTypes.func.isRequired, 
+};
+
 export default LiveTrackerPane;
