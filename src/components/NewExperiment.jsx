@@ -1,4 +1,3 @@
-// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/NewExperiment.jsx (Dinamik Form) ==========
 import { useState, useEffect } from 'react';
 import { startNewExperiment, fetchAvailablePipelines, fetchPipelineDefaultConfig } from '../services/api';
 import PropTypes from 'prop-types';
@@ -13,7 +12,6 @@ Feedback.propTypes = {
   type: PropTypes.string.isRequired,
 };
 
-// Yardımcı fonksiyon: Basit JSON objesinden form alanları oluşturur
 const renderConfigForm = (config, setConfig) => {
   if (!config) return null;
 
@@ -69,9 +67,10 @@ function NewExperiment({ onExperimentStarted }) {
   const [pipelines, setPipelines] = useState([]);
   const [selectedPipelineId, setSelectedPipelineId] = useState('');
   const [selectedPipelineDetails, setSelectedPipelineDetails] = useState(null);
-  const [currentConfig, setCurrentConfig] = useState(null); // Düzenlenebilir konfigürasyon
+  const [currentConfig, setCurrentConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
+  const [isConfigLoading, setIsConfigLoading] = useState(false); // YENİ: Konfigürasyon yükleme durumu
 
   useEffect(() => {
     const loadPipelines = async () => {
@@ -81,13 +80,9 @@ function NewExperiment({ onExperimentStarted }) {
         if (response.data.length > 0) {
           const firstPipeline = response.data[0];
           setSelectedPipelineId(firstPipeline.id);
-          setSelectedPipelineDetails(firstPipeline);
-          // İlk pipeline'ın varsayılan konfigürasyonunu yükle
-          await loadPipelineConfig(firstPipeline.id);
         }
       } catch (error) {
-        setFeedback({ type: 'error', message: 'Pipeline listesi yüklenemedi. API\'nizin /api/v1/pipelines endpoint\'ini kontrol edin.' });
-        console.error("Error fetching pipelines:", error);
+        setFeedback({ type: 'error', message: 'Pipeline listesi yüklenemedi.' });
       } finally {
         setIsLoading(false);
       }
@@ -96,64 +91,54 @@ function NewExperiment({ onExperimentStarted }) {
   }, []);
 
   const loadPipelineConfig = async (pipelineId) => {
+    if (!pipelineId) return;
+    setIsConfigLoading(true);
+    setCurrentConfig(null);
     try {
       const configResponse = await fetchPipelineDefaultConfig(pipelineId);
-      if (configResponse.data.error) {
-        setFeedback({ type: 'info', message: configResponse.data.message });
-        setCurrentConfig(null); // Konfigürasyon yoksa boş bırak
-      } else {
+      if (configResponse.data && !configResponse.data.error) {
         setCurrentConfig(configResponse.data);
-        setFeedback(null); // Başarılı yüklemede feedback'i temizle
+        setFeedback(null);
+      } else {
+        setFeedback({ type: 'info', message: 'Bu pipeline için düzenlenebilir varsayılan konfigürasyon bulunamadı.' });
       }
     } catch (error) {
-      setFeedback({ type: 'error', message: `Varsayılan konfigürasyon yüklenemedi: ${error.message}` });
-      setCurrentConfig(null);
-      console.error("Error fetching default config:", error);
+      setFeedback({ type: 'error', message: `Konfigürasyon yüklenemedi: ${error.message}` });
+    } finally {
+        setIsConfigLoading(false);
     }
   };
 
-  // Seçilen pipeline değiştiğinde konfigürasyonu yeniden yükle
   useEffect(() => {
     if (selectedPipelineId) {
+      setSelectedPipelineDetails(pipelines.find(p => p.id === selectedPipelineId));
       loadPipelineConfig(selectedPipelineId);
     }
-  }, [selectedPipelineId]);
+  }, [selectedPipelineId, pipelines]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedPipelineId) {
-      setFeedback({ type: 'error', message: 'Lütfen bir pipeline seçin.' });
-      return;
-    }
-
     setIsLoading(true);
     setFeedback(null);
     
-    // Gönderilecek konfigürasyon, kullanıcıdan alınan güncel konfigürasyon olacak
-    const configToSend = {
-      pipeline_name: selectedPipelineId,
-      ...currentConfig // Mevcut konfigürasyon objesini ekle
-    };
+    // DÜZELTME: currentConfig null olsa bile pipeline_name'i gönder
+    const configToSend = currentConfig ? { ...currentConfig, pipeline_name: selectedPipelineId } : { pipeline_name: selectedPipelineId };
     
     try {
       const response = await startNewExperiment(configToSend);
       const taskId = response.data.task_id;
       setFeedback({ type: 'success', message: `Görev başarıyla gönderildi! ID: ${taskId}` });
-      
-      if (onExperimentStarted && taskId) {
+      if (onExperimentStarted) {
         onExperimentStarted(taskId);
       }
-      
     } catch (err) {
       setFeedback({ type: 'error', message: 'Deney başlatılamadı. API ve Worker loglarını kontrol edin.' });
-      console.error("Error starting experiment:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   if (isLoading && pipelines.length === 0) return <p className="feedback info">Pipeline'lar yükleniyor...</p>;
-  if (pipelines.length === 0) return <p className="feedback error">Platforma kurulu ve keşfedilmiş pipeline eklentisi bulunamadı.</p>;
 
   return (
     <form onSubmit={handleSubmit} className="form-container card">
@@ -164,11 +149,7 @@ function NewExperiment({ onExperimentStarted }) {
 
       <div className="form-group">
         <label htmlFor="pipeline-select">Çalıştırılacak Pipeline Eklentisi</label>
-        <select id="pipeline-select" value={selectedPipelineId} onChange={(e) => {
-          const newId = e.target.value;
-          setSelectedPipelineId(newId);
-          setSelectedPipelineDetails(pipelines.find(p => p.id === newId));
-        }}>
+        <select id="pipeline-select" value={selectedPipelineId} onChange={(e) => setSelectedPipelineId(e.target.value)} disabled={isLoading}>
           {pipelines.map(p => (
             <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
           ))}
@@ -182,18 +163,19 @@ function NewExperiment({ onExperimentStarted }) {
           <p><strong>Repository:</strong> <a href={selectedPipelineDetails.repository} target="_blank" rel="noopener noreferrer">{selectedPipelineDetails.repository}</a></p>
         </div>
       )}
-
-      {currentConfig ? (
+      
+      {isConfigLoading ? (
+          <p className="feedback info">Konfigürasyon yükleniyor...</p>
+      ) : currentConfig ? (
         <div className="card" style={{ marginTop: '20px' }}>
           <h3>Deney Parametreleri (Düzenlenebilir)</h3>
           {renderConfigForm(currentConfig, setCurrentConfig)}
-          <p className="feedback info">Bu parametreleri düzenleyerek deneyi başlatabilirsiniz.</p>
         </div>
       ) : (
-        <p className="feedback info">Seçilen pipeline için varsayılan konfigürasyon bulunamadı. Deney varsayılan parametrelerle başlatılacaktır.</p>
+        <p className="feedback info">Bu pipeline için düzenlenebilir varsayılan konfigürasyon bulunamadı. Deney, pipeline'ın kendi içindeki varsayılanlarıyla başlatılacaktır.</p>
       )}
 
-      <button type="submit" disabled={isLoading} className="button-primary">
+      <button type="submit" disabled={isLoading || isConfigLoading} className="button-primary">
         {isLoading ? 'Başlatılıyor...' : `"${selectedPipelineDetails?.name || 'Seçilen'}" Eğitimini Başlat`}
       </button>
       
@@ -203,7 +185,6 @@ function NewExperiment({ onExperimentStarted }) {
 }
 
 NewExperiment.propTypes = {
-  onExperimentStarted: PropTypes.func.isRequired,
+    onExperimentStarted: PropTypes.func.isRequired,
 };
-
 export default NewExperiment;
