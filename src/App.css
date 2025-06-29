@@ -1,37 +1,47 @@
-/* Kök Değişkenler: Tüm tasarım sistemimiz için merkezi kontrol noktası */
+/* ==========================================================================
+   1. KÖK DEĞİŞKENLER (Tasarım Sistemi)
+   ========================================================================== */
 :root {
+  /* Renk Paleti */
   --primary-color: #42b983; /* AzuraForge Yeşili */
   --primary-color-dark: #369c70;
   --secondary-color: #3b82f6; /* Vurgu için mavi */
-  --text-color: #e2e8f0; /* Açık gri metin */
-  --text-color-darker: #94a3b8; /* Daha soluk metin */
-  --bg-color: #0f172a; /* Ana Arkaplan (Çok Koyu Mavi/Siyah) */
-  --content-bg: #1e2b3b; /* Kart ve İçerik Arkaplanı (Koyu Gri/Mavi) */
-  --border-color: #334155;
+  
+  --text-color: #e2e8f0;       /* Ana Metin Rengi (Açık Gri) */
+  --text-color-darker: #94a3b8; /* İkincil Metin Rengi (Soluk Gri) */
+  --text-inverse: #ffffff;      /* Vurgulu Metin Rengi (Beyaz) */
+
+  --bg-color: #0f172a;       /* Ana Arkaplan (Çok Koyu Mavi/Siyah) */
+  --content-bg: #1e293b;     /* Kart, Tablo vb. İçerik Arkaplanı */
+  --border-color: #334155;   /* Ayırıcılar ve Kenarlıklar */
+  --hover-bg: #2a3a52;       /* Satır ve link hover arkaplanı */
+
+  /* Durum Renkleri */
   --success-color: #22c55e;
   --error-color: #ef4444;
   --warning-color: #f59e0b;
   --info-color: #3b82f6;
-  --font-sans: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+
+  /* Tipografi (Font Ailesi) */
+  /* 'Inter' fontu @fontsource/inter paketi tarafından sağlanır */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Gölgeler ve Köşeler */
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+  --border-radius: 12px;
 }
 
-/* YENİ: React-Toastify için stil üzerine yazma */
-.Toastify__toast {
-  background-color: var(--content-bg) !important;
-  color: var(--text-color) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 8px !important;
-}
-.Toastify__progress-bar {
-  background: var(--primary-color) !important;
-}
-.Toastify__close-button {
-  color: var(--text-color) !important;
+
+/* ==========================================================================
+   2. TEMEL RESET VE GLOBAL STİLLER
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-/* Temel Reset ve Genel Stiller */
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -47,7 +57,13 @@ body {
   display: flex;
   width: 100vw;
   height: 100vh;
+  overflow: hidden; /* Sayfa seviyesinde kaydırmayı engelle */
 }
+
+
+/* ==========================================================================
+   3. ANA YAPI (Layout)
+   ========================================================================== */
 
 /* Sidebar */
 .sidebar {
@@ -57,19 +73,18 @@ body {
   padding: 20px;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   transition: width 0.3s ease;
-  z-index: 2000; /* Sidebar'ın modal'ın üzerinde kalmaması için */
+  z-index: 2000;
 }
-
 .sidebar h2 {
   color: var(--primary-color);
   font-size: 1.8em;
   font-weight: 700;
   text-align: center;
-  margin-bottom: 40px;
+  margin: 0 0 40px 0;
   letter-spacing: 1px;
 }
-
 .sidebar nav ul { list-style: none; padding: 0; margin: 0; }
 .sidebar nav a {
   display: flex; align-items: center; gap: 15px; padding: 12px 15px;
@@ -78,156 +93,62 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
   font-weight: 500;
 }
-.sidebar nav a:hover { background-color: var(--content-bg); color: var(--text-color); }
-.sidebar nav a.active { background-color: var(--primary-color); color: white; font-weight: 600; }
+.sidebar nav a:hover { background-color: var(--content-bg); color: var(--text-inverse); }
+.sidebar nav a.active { background-color: var(--primary-color); color: var(--text-inverse); font-weight: 600; }
 
 /* Ana İçerik Alanı */
 .main-content {
-  flex-grow: 1; padding: 30px; overflow-y: auto; position: relative;
+  flex-grow: 1;
+  padding: 30px;
+  overflow-y: auto; /* Sadece bu alan kaydırılabilir olacak */
+  position: relative;
 }
-/* Genel Başlık Stilleri */
-.page-header {
-  margin-bottom: 30px;
-}
+
+/* Sayfa Başlıkları */
+.page-header { margin-bottom: 30px; }
 .page-header h1 {
-  font-size: 2.2em;
-  font-weight: 700;
-  color: white;
-  margin: 0 0 5px 0;
-  display: flex;
-  align-items: center;
-  gap: 15px;
+  font-size: 2.2em; font-weight: 700; color: var(--text-inverse);
+  margin: 0 0 5px 0; display: flex; align-items: center; gap: 15px;
 }
-.page-header p {
-  color: var(--text-color-darker);
-  font-size: 1.1em;
-  margin: 0;
-}
+.page-header p { color: var(--text-color-darker); font-size: 1.1em; margin: 0; }
 
+/* Bölüm Başlıkları */
 .section-title {
-  font-size: 1.8em;
-  color: white;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
+  font-size: 1.5em; color: var(--text-inverse);
+  margin: 40px 0 20px 0; padding-bottom: 10px;
   border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: flex; align-items: center; gap: 12px;
 }
+.section-title:first-of-type { margin-top: 0; }
 
-/* Kart Bileşeni */
+
+/* ==========================================================================
+   4. BİLEŞENLER (Components)
+   ========================================================================== */
+
+/* Kart */
 .card {
   background-color: var(--content-bg);
   border: 1px solid var(--border-color);
-  border-radius: 12px; padding: 25px;
+  border-radius: var(--border-radius);
+  padding: 25px;
   box-shadow: var(--shadow-md);
 }
 
-.card.clickable:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 0 25px -5px rgba(66, 185, 131, 0.2);
-}
-
-/* Canlı Takip Paneli (Glassmorphism) */
-.live-tracker-pane {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  margin: -30px -30px 30px -30px; /* Padding'i sıfırla */
-  padding: 20px 30px;
-  background: rgba(30, 41, 59, 0.7); /* content-bg'nin yarı şeffaf hali */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border-color);
-  box-shadow: var(--shadow-lg);
-}
-
-.live-tracker-pane .close-button {
-  position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; color: var(--text-color-darker); cursor: pointer; transition: color 0.2s;
-}
-.live-tracker-pane .close-button:hover { color: white; }
-
-.live-tracker-pane .tracker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.live-tracker-pane .tracker-header h4 { margin: 0; font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
-.live-tracker-pane .tracker-header .tracker-info { display: flex; align-items: center; gap: 15px; }
-
-.live-tracker-pane .tracker-body { display: flex; gap: 20px; align-items: center; }
-.live-tracker-pane .tracker-progress { flex: 1; }
-.live-tracker-pane .tracker-chart { flex: 2; height: 100px; }
-
-/* Status Badges */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 9999px; /* Pill shape */
-  font-size: 0.8em;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: white;
-  min-width: 90px;
-  justify-content: center;
-}
-.status-badge::before {
-    content: '';
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-
-.status-badge.status-started, .status-badge.status-progress, .status-badge.status-connecting, .status-badge.status-connected {
-  background-color: rgba(59, 130, 246, 0.2); color: #60a5fa;
-}
-.status-badge.status-started::before, .status-badge.status-progress::before, .status-badge.status-connecting::before, .status-badge.status-connected::before {
-  background-color: var(--info-color);
-}
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-.status-badge.status-success { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; }
-.status-badge.status-success::before { background-color: var(--success-color); animation: none; }
-
-.status-badge.status-failure, .status-badge.status-error { background-color: rgba(239, 68, 68, 0.2); color: #f87171; }
-.status-badge.status-failure::before, .status-badge.status-error::before { background-color: var(--error-color); animation: none; }
-
-.status-badge.status-pending, .status-badge.status-unknown, .status-badge.status-disconnected { background-color: rgba(148, 163, 184, 0.2); color: var(--text-color-darker); }
-.status-badge.status-pending::before, .status-badge.status-unknown::before, .status-badge.status-disconnected::before { background-color: var(--text-color-darker); animation: none; }
-
-
-/* Form Stilleri */
-.form-container, .pipeline-details {
-  border-radius: 12px;
-  margin-bottom: 25px;
-}
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-color-darker); }
-.form-group input, .form-group select {
-  width: calc(100% - 24px);
-  padding: 12px;
-  background-color: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-color);
-  font-size: 1em;
-}
-.form-group input:focus, .form-group select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(66, 185, 131, 0.3);
-}
-
+/* Butonlar */
 .button-primary {
   background-color: var(--primary-color);
-  color: white;
-  padding: 12px 24px;
+  color: var(--text-inverse);
+  padding: 10px 20px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 1em;
   font-weight: 600;
   transition: background-color 0.2s ease, transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .button-primary:hover:not(:disabled) {
   background-color: var(--primary-color-dark);
@@ -236,102 +157,178 @@ body {
 .button-primary:disabled {
   background-color: var(--border-color);
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.6;
+  transform: none;
 }
 
+/* Durum Etiketleri (Badges) */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 9999px;
+  font-size: 0.8em; font-weight: 600;
+  text-transform: uppercase; justify-content: center;
+}
+.status-badge::before {
+  content: ''; display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.status-badge.status-started, .status-badge.status-progress, .status-badge.status-connecting, .status-badge.status-connected {
+  background-color: rgba(59, 130, 246, 0.2); color: #60a5fa;
+}
+.status-badge.status-started::before, .status-badge.status-progress::before, .status-badge.status-connecting::before, .status-badge.status-connected::before {
+  background-color: var(--info-color); animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.status-badge.status-success { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.status-badge.status-success::before { background-color: var(--success-color); }
+.status-badge.status-failure, .status-badge.status-error { background-color: rgba(239, 68, 68, 0.2); color: #f87171; }
+.status-badge.status-failure::before, .status-badge.status-error::before { background-color: var(--error-color); }
+.status-badge.status-pending, .status-badge.status-unknown, .status-badge.status-disconnected { background-color: rgba(148, 163, 184, 0.2); color: var(--text-color-darker); }
+.status-badge.status-pending::before, .status-badge.status-unknown::before, .status-badge.status-disconnected::before { background-color: var(--text-color-darker); }
 
-/* Tablo Stilleri */
+/* Form Elemanları */
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-color-darker); }
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-size: 1em;
+  font-family: var(--font-sans);
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(66, 185, 131, 0.3);
+}
+
+/* Tablo */
 .table-container {
   overflow-x: auto;
-  border: 1px solid var(--border-color); border-radius: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
   background-color: var(--content-bg);
 }
 table { width: 100%; border-collapse: collapse; }
-table th, table td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle;}
+table th, table td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
 table th {
   background-color: var(--bg-color);
   color: var(--text-color-darker); font-weight: 600;
-  text-transform: uppercase; font-size: 0.85em;
-  letter-spacing: 0.5px;
+  text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.5px;
 }
-table tbody tr:hover { background-color: #2a3a52; }
-table tbody tr.selected-row { background-color: rgba(66, 185, 131, 0.1); }
+table tbody tr:hover { background-color: var(--hover-bg); }
+table tbody tr.selected-row { background-color: rgba(66, 185, 131, 0.1); border-left: 3px solid var(--primary-color); }
 table tr:last-child td { border-bottom: none; }
+.exp-id { font-family: var(--font-mono); color: var(--text-color-darker); font-size: 0.9em; }
+.detail-cell { display: flex; flex-direction: column; gap: 4px; font-size: 0.9em; }
+.detail-cell strong { color: var(--text-inverse); font-weight: 500; }
 
-.exp-id { font-family: monospace; color: var(--text-color-darker); font-size: 0.9em; }
-
-/* YENİ: Hücre içi detaylar için */
-.detail-cell {
-  display: flex; flex-direction: column; gap: 4px; font-size: 0.9em;
-}
-.detail-cell strong { color: white; }
-
-/* YENİ: Satır aksiyonları için */
+/* Aksiyon Menüsü */
 .actions-cell { position: relative; text-align: right !important; }
 .actions-button {
   background: none; border: none; font-size: 24px; line-height: 1;
-  color: var(--text-color-darker); cursor: pointer; border-radius: 4px;
-  padding: 0 8px;
+  color: var(--text-color-darker); cursor: pointer; border-radius: 4px; padding: 0 8px;
 }
-.actions-button:hover { background-color: var(--border-color); color: white; }
+.actions-button:hover { background-color: var(--border-color); color: var(--text-inverse); }
 .actions-menu {
   position: absolute; right: 20px; top: 50px;
-  background-color: #2a3a52; border: 1px solid var(--border-color);
+  background-color: var(--hover-bg); border: 1px solid var(--border-color);
   border-radius: 8px; box-shadow: var(--shadow-lg);
   z-index: 100; display: flex; flex-direction: column;
   padding: 8px; min-width: 180px;
 }
 .actions-menu button {
   background: none; border: none; color: var(--text-color);
-  padding: 10px 15px; text-align: left;
-  cursor: pointer; border-radius: 6px; display: flex;
-  align-items: center; gap: 10px; font-size: 0.9em;
+  padding: 10px 15px; text-align: left; cursor: pointer;
+  border-radius: 6px; display: flex; align-items: center;
+  gap: 10px; font-size: 0.9em;
 }
-.actions-menu button:hover { background-color: var(--secondary-color); color: white; }
+.actions-menu button:hover { background-color: var(--secondary-color); color: var(--text-inverse); }
 
-/* YENİ: Karşılaştırma Modalı Stilleri */
+
+/* ==========================================================================
+   5. ÖZEL BİLEŞENLER (Panes & Modals)
+   ========================================================================== */
+
+/* Canlı Takip Paneli */
+.live-tracker-pane {
+  position: sticky; top: -30px; /* main-content padding'ini dengelemek için */
+  z-index: 1000;
+  margin: -30px -30px 30px -30px;
+  padding: 20px 30px;
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+.live-tracker-pane .close-button {
+  position: absolute; top: 15px; right: 20px; background: none; border: none;
+  font-size: 24px; color: var(--text-color-darker); cursor: pointer; transition: color 0.2s;
+}
+.live-tracker-pane .close-button:hover { color: var(--text-inverse); }
+.live-tracker-pane .tracker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.live-tracker-pane .tracker-header h4 { margin: 0; font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
+.live-tracker-pane .tracker-header .tracker-info { display: flex; align-items: center; gap: 15px; }
+.live-tracker-pane .tracker-body { display: flex; gap: 20px; align-items: center; }
+.live-tracker-pane .tracker-progress { flex: 1; }
+.live-tracker-pane .tracker-chart { flex: 2; height: 100px; }
+
+/* Karşılaştırma Modalı */
 .comparison-modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
+  background-color: rgba(15, 23, 42, 0.7); /* bg-color'ın yarı şeffaf hali */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 5000;
   display: flex; align-items: center; justify-content: center;
 }
 .comparison-modal-content {
   background-color: var(--bg-color);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  width: 90%; max-width: 1200px;
-  height: 90vh;
-  box-shadow: var(--shadow-lg);
+  border-radius: 16px; width: 90%; max-width: 1200px;
+  height: 90vh; box-shadow: var(--shadow-lg);
   display: flex; flex-direction: column;
 }
 .comparison-header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 20px 30px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 20px 30px; border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 .comparison-header h2 { margin: 0; font-size: 1.5em; }
 .comparison-modal-content .close-button {
-  background: none; border: none; font-size: 24px; color: var(--text-color-darker);
-  cursor: pointer; transition: color 0.2s;
+  background: none; border: none; font-size: 24px;
+  color: var(--text-color-darker); cursor: pointer; transition: color 0.2s;
 }
-.comparison-modal-content .close-button:hover { color: white; }
+.comparison-modal-content .close-button:hover { color: var(--text-inverse); }
 .comparison-body {
-  padding: 30px;
-  flex-grow: 1;
-  overflow-y: auto;
+  padding: 30px; flex-grow: 1; overflow-y: auto;
   display: flex; flex-direction: column; gap: 30px;
 }
 .comparison-chart-container {
-  height: 400px;
-  min-height: 300px;
-  width: 100%;
+  height: 400px; min-height: 300px; width: 100%; position: relative;
+}
+.chart-instructions {
+  position: absolute; bottom: 5px; right: 10px;
+  font-size: 0.75em; color: var(--text-color-darker);
+  background-color: rgba(30, 41, 59, 0.8);
+  padding: 2px 8px; border-radius: 4px; opacity: 0.7;
 }
 .color-indicator {
-  display: inline-block;
-  width: 12px; height: 12px;
-  border-radius: 50%;
-  margin-right: 10px;
-  vertical-align: middle;
+  display: inline-block; width: 12px; height: 12px;
+  border-radius: 50%; margin-right: 10px; vertical-align: middle;
 }
+
+/* Toastify (Bildirim) Stilleri */
+.Toastify__toast {
+  background-color: var(--content-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  font-family: var(--font-sans) !important;
+}
+.Toastify__progress-bar { background: var(--primary-color) !important; }
+.Toastify__close-button { color: var(--text-color) !important; }

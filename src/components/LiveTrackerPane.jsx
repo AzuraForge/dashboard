@@ -6,25 +6,48 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 function LiveTrackerPane({ taskId, onClose }) {
-  // DÜZELTME: State değişkeni adı 'statusData', set fonksiyonu 'setStatusData'
   const [statusData, setStatusData] = useState({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
   const [chartData, setChartData] = useState({ labels: [], datasets: [{ label: 'Loss', data: [] }] });
   const ws = useRef(null);
 
+  // GÜNCELLEME: Canlı grafik için daha iyi seçenekler
+  const chartOptions = {
+    animation: false, responsive: true, maintainAspectRatio: false,
+    plugins: { 
+      legend: { display: false }, 
+      tooltip: { 
+        enabled: true,
+        backgroundColor: 'var(--content-bg)',
+        borderColor: 'var(--border-color)',
+      } 
+    },
+    scales: { 
+        y: { 
+          beginAtZero: false, 
+          ticks: { color: 'var(--text-color-darker)', maxTicksLimit: 5 }, // Renk ve tick sayısı
+          grid: { color: 'var(--border-color)' }
+        }, 
+        x: { 
+          ticks: { color: 'var(--text-color-darker)', maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, 
+          grid: { color: 'var(--border-color)' } 
+        } 
+    }
+  };
+
   useEffect(() => {
     if (!taskId) return;
-
-    // DÜZELTME: State'i setStatusData ile başlat
     setStatusData({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
     setChartData({
       labels: [],
       datasets: [{
         label: 'Eğitim Kaybı', data: [],
-        borderColor: '#42b983', backgroundColor: 'rgba(66, 185, 131, 0.5)',
-        tension: 0.1, fill: false
+        borderColor: 'var(--primary-color)', 
+        backgroundColor: 'rgba(66, 185, 131, 0.2)',
+        tension: 0.1, fill: true, // Alanı doldurarak daha dolgun bir görünüm
+        pointRadius: 2,
       }]
     });
-
+    // ... (WebSocket logic - no change needed here) ...
     const wsUrl = `ws://localhost:8000/ws/task_status/${taskId}`;
     ws.current = new WebSocket(wsUrl);
 
@@ -32,22 +55,25 @@ function LiveTrackerPane({ taskId, onClose }) {
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      // DÜZELTME: State'i setStatusData ile güncelle
       setStatusData(data);
       
       const updateChart = (newLoss, newEpoch) => {
         setChartData(prev => {
             const epochLabel = `E${newEpoch}`;
+            // YENİ: Grafikte maksimum 50 nokta tut, performansı koru
+            const newLabels = [...prev.labels, epochLabel].slice(-50);
+            const newData = [...prev.datasets[0].data, newLoss].slice(-50);
+
             if (!prev.labels.includes(epochLabel)) {
                 return {
-                    labels: [...prev.labels, epochLabel],
-                    datasets: [{ ...prev.datasets[0], data: [...prev.datasets[0].data, newLoss] }]
+                    labels: newLabels,
+                    datasets: [{ ...prev.datasets[0], data: newData }]
                 };
             }
             return prev;
         });
       };
-
+      
       if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
         updateChart(data.details.loss, data.details.epoch);
       } else if (data.ready || data.state === 'SUCCESS' || data.state === 'FAILURE') {
@@ -55,7 +81,7 @@ function LiveTrackerPane({ taskId, onClose }) {
         if (finalResult.results?.loss && Array.isArray(finalResult.results.loss)) {
             const losses = finalResult.results.loss;
             const labels = Array.from({ length: losses.length }, (_, i) => `E${i + 1}`);
-            setChartData({ labels: labels, datasets: [{...chartData.datasets[0], data: losses }]});
+            setChartData({ labels: labels.slice(-50), datasets: [{...chartData.datasets[0], data: losses.slice(-50) }]});
         }
         if (ws.current.readyState === WebSocket.OPEN) {
             ws.current.close();
@@ -64,12 +90,10 @@ function LiveTrackerPane({ taskId, onClose }) {
     };
 
     ws.current.onerror = () => {
-        // DÜZELTME: State'i setStatusData ile güncelle
         setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
     };
     
     ws.current.onclose = () => {
-      // DÜZELTME: State'i setStatusData ile güncelle
       setStatusData(prev => {
         if (prev?.state === 'SUCCESS' || prev?.state === 'FAILURE' || prev?.state === 'ERROR') return prev;
         return { ...prev, state: 'DISCONNECTED', details: { status_text: `Bağlantı kesildi.` } };
@@ -77,9 +101,7 @@ function LiveTrackerPane({ taskId, onClose }) {
     };
 
     return () => {
-      if (ws.current) {
-        ws.current.close();
-      }
+      if (ws.current) ws.current.close();
     };
   }, [taskId]);
   
@@ -98,18 +120,12 @@ function LiveTrackerPane({ taskId, onClose }) {
   }
 
   let progressPercent = 0;
-  if (state === 'SUCCESS') {
-    progressPercent = 100;
-  } else if (details?.total_epochs) {
-    progressPercent = ((details.epoch || 0) / details.total_epochs) * 100;
-  }
+  if (state === 'SUCCESS') progressPercent = 100;
+  else if (details?.total_epochs) progressPercent = ((details.epoch || 0) / details.total_epochs) * 100;
 
   let statusText = 'İlerleme durumu bekleniyor...';
-  if (state === 'SUCCESS') {
-    statusText = 'Eğitim başarıyla tamamlandı!';
-  } else if (details?.status_text) {
-    statusText = details.status_text;
-  }
+  if (state === 'SUCCESS') statusText = 'Eğitim başarıyla tamamlandı!';
+  else if (details?.status_text) statusText = details.status_text;
   
   return (
     <div className="live-tracker-pane">
@@ -130,14 +146,7 @@ function LiveTrackerPane({ taskId, onClose }) {
         </div>
         <div className="tracker-chart">
           {chartData.labels.length > 0 ? (
-            <Line data={chartData} options={{
-              animation: false, responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { enabled: true } },
-              scales: { 
-                  y: { beginAtZero: false, ticks: { color: 'var(--text-color-darker)' }, grid: { color: 'var(--border-color)' } }, 
-                  x: { ticks: { color: 'var(--text-color-darker)', maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }, grid: { color: 'var(--border-color)' } } 
-              }
-            }} />
+            <Line data={chartData} options={chartOptions} />
           ) : <div className="chart-placeholder">Grafik verisi bekleniyor...</div>}
         </div>
       </div>
