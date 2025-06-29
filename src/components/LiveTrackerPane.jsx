@@ -53,7 +53,6 @@ function LiveTrackerPane({ taskId, onClose }) {
   useEffect(() => {
     if (!taskId) return;
 
-    // YENİ: Başlangıç chart state'ini renklerle birlikte burada ayarla
     const initialChartWithColors = {
       labels: [],
       datasets: [{
@@ -80,12 +79,14 @@ function LiveTrackerPane({ taskId, onClose }) {
         let newChart = prev.chart;
         if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
           const epochLabel = `E${data.details.epoch}`;
+          // Sadece yeni epoch ise grafiğe ekle
           if (!prev.chart.labels.includes(epochLabel)) {
-            const newLabels = [...prev.chart.labels, epochLabel].slice(-30);
+            const newLabels = [...prev.chart.labels, epochLabel].slice(-30); // Son 30 epoch'u göster
             const newLossData = [...prev.chart.datasets[0].data, data.details.loss].slice(-30);
             newChart = { ...prev.chart, labels: newLabels, datasets: [{ ...prev.chart.datasets[0], data: newLossData }] };
           }
         } else if (data.result?.results?.loss) {
+            // Görev bittiğinde tam kayıp geçmişini çiz
           const finalLossHistory = data.result.results.loss;
           newChart = {
             ...prev.chart,
@@ -93,6 +94,7 @@ function LiveTrackerPane({ taskId, onClose }) {
             datasets: [{ ...prev.chart.datasets[0], data: finalLossHistory }]
           };
         }
+        // Hem status'ü hem de chart'ı tek seferde güncelle
         return { status: data, chart: newChart };
       });
     };
@@ -100,25 +102,32 @@ function LiveTrackerPane({ taskId, onClose }) {
     newSocket.onerror = () => setLiveData(prev => ({ ...prev, status: { state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } }}));
     newSocket.onclose = () => setLiveData(prev => (['SUCCESS', 'FAILURE', 'ERROR'].includes(prev.status.state)) ? prev : { ...prev, status: { ...prev.status, state: 'DISCONNECTED' }});
     
-    return () => { newSocket.close(1000, "Component unmounting"); };
+    return () => { if (newSocket.readyState === 1) newSocket.close(1000, "Component unmounting"); };
   }, [taskId]);
   
   const { state, details, result } = liveData.status;
-  const { pipeline_name, data_sourcing } = details?.config || result?.config || {};
+  const { pipeline_name } = result?.config || details?.config || {};
   const { total_epochs, epoch, status_text } = details || {};
-  const progressPercent = state === 'SUCCESS' ? 100 : (total_epochs ? (epoch / total_epochs) * 100 : 0);
+  const progressPercent = (state === 'SUCCESS' || state === 'FAILURE') ? 100 : (total_epochs && epoch ? (epoch / total_epochs) * 100 : 0);
   
   return (
     <div className="live-tracker-pane">
       <button className="close-button" onClick={onClose}>×</button>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-        <h4><span role="img" aria-label="satellite">🛰️</span> Canlı Takip: {pipeline_name || "..."} {data_sourcing?.ticker && `(${data_sourcing.ticker})`}</h4>
-        <div><span className="exp-id">ID: {taskId}</span><span className={`status-badge status-${state?.toLowerCase()}`}>{state}</span></div>
+        <h4><span role="img" aria-label="satellite">🛰️</span> Canlı Takip: {pipeline_name || "Yükleniyor..."}</h4>
+        <div><span className="exp-id">ID: {taskId.slice(0, 8)}...</span><span className={`status-badge status-${state?.toLowerCase()}`}>{state}</span></div>
       </div>
       <div style={{display: 'flex', gap: '20px', alignItems: 'center'}}>
-        <div style={{flex: 1}}><p>{status_text || state}</p><progress value={progressPercent} max="100" style={{width: '100%'}}></progress></div>
-        <div style={{flex: 2, height: '100px'}}>
-          {liveData.chart.labels.length > 0 && <Line data={liveData.chart} options={chartOptions} />}
+        <div style={{flex: 1}}>
+            <p style={{ margin: '0 0 5px 0', height: '40px', overflow: 'hidden' }}>{status_text || state}</p>
+            <progress value={progressPercent} max="100" style={{width: '100%', height: '10px'}}></progress>
+        </div>
+        <div style={{flex: 2, height: '100px', position: 'relative'}}>
+          {liveData.chart.labels.length > 0 ? (
+            <Line data={liveData.chart} options={chartOptions} />
+          ) : (
+            <div style={{textAlign: 'center', color: 'var(--text-color-darker)'}}>Kayıp verisi bekleniyor...</div>
+          )}
         </div>
       </div>
       {state === 'FAILURE' && result?.error && <p className="feedback error" style={{marginTop: '15px', whiteSpace: 'pre-wrap', maxHeight: '100px', overflowY: 'auto'}}>{result.error}</p>}
