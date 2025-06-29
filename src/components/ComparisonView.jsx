@@ -1,16 +1,14 @@
+// Bu dosyanın içeriği önceki cevaptaki ile aynı, tam halini tekrar veriyorum
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';
 
-// Zoom plugin'ini Chart.js'e kaydediyoruz
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, zoomPlugin);
 
-// Grafik çizgileri için renk paleti
 const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 function ComparisonView({ experiments, onClose }) {
-  // Grafik verisini dinamik olarak oluştur
   const chartData = {
     labels: Array.from({ length: Math.max(...experiments.map(e => e.results?.loss?.length || 0)) }, (_, i) => `E${i + 1}`),
     datasets: experiments.map((exp, i) => ({
@@ -18,53 +16,28 @@ function ComparisonView({ experiments, onClose }) {
       data: exp.results?.loss || [],
       borderColor: chartColors[i % chartColors.length],
       backgroundColor: `${chartColors[i % chartColors.length]}33`,
-      tension: 0.1,
-      fill: false,
-      borderWidth: 2,
-      pointRadius: 1,
-      pointHoverRadius: 5,
+      tension: 0.1, fill: false, borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
     })),
   };
 
-  // chartOptions sadeleştirildi. Renk ayarları artık main.jsx'teki global ayarlardan geliyor.
   const chartOptions = {
       responsive: true, maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
+      interaction: { mode: 'index', intersect: false, },
       plugins: { 
-        legend: { 
-          position: 'top', 
-          labels: { font: { size: 14 } } 
-        },
+        legend: { position: 'top', labels: { font: { size: 14 } } },
         tooltip: {
           backgroundColor: 'var(--content-bg)',
           borderColor: 'var(--border-color)',
           borderWidth: 1,
         },
         zoom: {
-          pan: { 
-            enabled: true, 
-            mode: 'xy', 
-            modifierKey: 'alt',
-          },
-          zoom: { 
-            wheel: { enabled: true }, 
-            pinch: { enabled: true }, 
-            mode: 'xy' 
-          }
+          pan: { enabled: true, mode: 'xy', modifierKey: 'alt', },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }
         }
       },
       scales: {
-          y: { 
-            title: { display: true, text: 'Kayıp Değeri (Loss)' }, 
-            beginAtZero: false,
-          }, 
-          x: { 
-            title: { display: true, text: 'Epoch' },
-            grid: { display: false } 
-          } 
+          y: { title: { display: true, text: 'Kayıp Değeri (Loss)' }, beginAtZero: false, }, 
+          x: { title: { display: true, text: 'Epoch' }, grid: { display: false } } 
       }
   };
 
@@ -75,34 +48,19 @@ function ComparisonView({ experiments, onClose }) {
           <h2>Deney Karşılaştırması ({experiments.length} adet)</h2>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
-        
         <div className="comparison-body">
           <div className="comparison-chart-container">
             <Line data={chartData} options={chartOptions} />
-            <p className="chart-instructions">
-              <strong>Alt + Sürükle</strong>.
-            </p>
+            <p className="chart-instructions">Yakınlaştırmak için fare tekerleğini kullanın. Sıfırlamak için çift tıklayın. Kaydırmak için <strong>Alt + Sürükle</strong>.</p>
           </div>
-
-          <h4 className="section-title">Özet Tablosu</h4>
+          <h4 className="section-title" style={{ marginTop: 0 }}>Özet Tablosu</h4>
           <div className="table-container">
             <table>
-              <thead>
-                <tr>
-                  <th>Deney ID</th>
-                  <th>Ticker</th>
-                  <th>Epochs</th>
-                  <th>LR</th>
-                  <th>Final Kayıp</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Deney ID</th><th>Ticker</th><th>Epochs</th><th>LR</th><th>Final Kayıp</th></tr></thead>
               <tbody>
                 {experiments.map((exp, i) => (
                   <tr key={exp.experiment_id}>
-                    <td>
-                      <span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>
-                      {exp.experiment_id.slice(0, 18)}...
-                    </td>
+                    <td><span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>{exp.experiment_id.slice(0, 18)}...</td>
                     <td>{exp.config.data_sourcing.ticker}</td>
                     <td>{exp.config.training_params.epochs}</td>
                     <td>{exp.config.training_params.lr}</td>
@@ -117,10 +75,5 @@ function ComparisonView({ experiments, onClose }) {
     </div>
   );
 }
-
-ComparisonView.propTypes = {
-  experiments: PropTypes.array.isRequired,
-  onClose: PropTypes.func.isRequired,
-};
-
+ComparisonView.propTypes = { experiments: PropTypes.array.isRequired, onClose: PropTypes.func.isRequired, };
 export default ComparisonView;

@@ -1,18 +1,16 @@
 import PropTypes from 'prop-types';
 import ExperimentRow from './ExperimentRow';
 
-// GÜNCELLEME: Yeni propları alacak şekilde düzenlendi
 function ExperimentsList({ experiments, selectedIds, onSelect, onReRun, setTrackingTaskId }) {
   if (!experiments || experiments.length === 0) {
-    return <p className="feedback info">Henüz gösterilecek bir deney bulunamadı.</p>;
+    return <p style={{textAlign: 'center', padding: '20px'}}>Filtrelerinize uyan bir deney bulunamadı.</p>;
   }
-
   return (
     <div className="table-container">
       <table>
         <thead>
           <tr>
-            <th style={{width: '40px'}}></th> {/* Checkbox için boş başlık */}
+            <th style={{width: '40px'}}></th>
             <th>Durum</th>
             <th>Deney Detayları</th>
             <th>Parametreler</th>
@@ -37,13 +35,5 @@ function ExperimentsList({ experiments, selectedIds, onSelect, onReRun, setTrack
     </div>
   );
 }
-
-ExperimentsList.propTypes = {
-  experiments: PropTypes.array.isRequired,
-  selectedIds: PropTypes.object.isRequired,
-  onSelect: PropTypes.func.isRequired,
-  onReRun: PropTypes.func.isRequired,
-  setTrackingTaskId: PropTypes.func.isRequired,
-};
-
+ExperimentsList.propTypes = { experiments: PropTypes.array.isRequired, selectedIds: PropTypes.object.isRequired, onSelect: PropTypes.func.isRequired, onReRun: PropTypes.func.isRequired, setTrackingTaskId: PropTypes.func.isRequired, };
 export default ExperimentsList;
