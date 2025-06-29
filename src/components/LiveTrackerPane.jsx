@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+// dashboard/src/components/LiveTrackerPane.jsx
+
+import { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
-import { Chart } from 'chart.js';
-import 'chart.js/auto';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { getCssVar } from '../utils/cssUtils';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const initialStatus = { 
   state: 'CONNECTING', 
@@ -15,8 +18,6 @@ function LiveTrackerPane({ taskId, onClose }) {
     status: initialStatus,
     chart: { labels: [], datasets: [{ data: [] }] }
   });
-  
-  const socketRef = useRef(null);
   
   const chartOptions = useMemo(() => ({
     responsive: true, maintainAspectRatio: false,
@@ -66,7 +67,6 @@ function LiveTrackerPane({ taskId, onClose }) {
     setLiveData({ status: initialStatus, chart: initialChartWithColors });
 
     const newSocket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
-    socketRef.current = newSocket;
     
     newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -98,8 +98,7 @@ function LiveTrackerPane({ taskId, onClose }) {
   }, [taskId]);
   
   const { state, details, result } = liveData.status;
-  // DÜZELTME: Pipeline adını önce details'dan, sonra result'tan al.
-  const pipeline_name = details?.pipeline_name || result?.config?.pipeline_name || "Yükleniyor...";
+  const pipeline_name = details?.pipeline_name || result?.config?.pipeline_name || "Bilinmiyor";
   const { total_epochs, epoch, status_text } = details || {};
   const progressPercent = (state === 'SUCCESS' || state === 'FAILURE') ? 100 : (total_epochs && epoch ? (epoch / total_epochs) * 100 : 0);
   
@@ -108,11 +107,16 @@ function LiveTrackerPane({ taskId, onClose }) {
       <button className="close-button" onClick={onClose}>×</button>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
         <h4><span role="img" aria-label="satellite">🛰️</span> Canlı Takip: {pipeline_name}</h4>
-        <div><span className="exp-id">ID: {taskId.slice(0, 8)}...</span><span className={`status-badge status-${state?.toLowerCase()}`}>{state}</span></div>
+        <span className={`status-badge status-${state?.toLowerCase()}`}>{state}</span>
       </div>
       <div style={{display: 'flex', gap: '20px', alignItems: 'center'}}>
         <div style={{flex: 1}}>
-            <p style={{ margin: '0 0 5px 0', height: '40px', overflow: 'hidden' }}>{status_text || state}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
+                <p style={{ margin: 0, color: 'var(--text-color-darker)', fontSize: '0.9em' }}>{status_text || state}</p>
+                {epoch && total_epochs && (
+                    <span style={{ fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}>{epoch} / {total_epochs}</span>
+                )}
+            </div>
             <progress value={progressPercent} max="100" style={{width: '100%', height: '10px'}}></progress>
         </div>
         <div style={{flex: 2, height: '100px', position: 'relative'}}>
@@ -123,7 +127,7 @@ function LiveTrackerPane({ taskId, onClose }) {
           )}
         </div>
       </div>
-      {state === 'FAILURE' && result?.error && <p className="feedback error" style={{marginTop: '15px', whiteSpace: 'pre-wrap', maxHeight: '100px', overflowY: 'auto'}}>{result.error}</p>}
+      {state === 'FAILURE' && result?.error && <p style={{marginTop: '15px', color: 'var(--error-color)'}}>{result.error.message}</p>}
     </div>
   );
 }
