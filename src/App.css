@@ -253,3 +253,86 @@ progress::-moz-progress-bar {
   width: 100%;
   position: relative; /* İçindeki canvas'ı konumlandırmak için */
 }
+
+/* ========== GÜNCELLENECEK DOSYA: dashboard/src/App.css (Yeni Stil) ========== */
+
+/* Diğer CSS kurallarınız burada */
+
+.clickable-cell a {
+  text-decoration: none; /* Alt çizgiyi kaldır */
+  color: #007bff; /* Mavi renk ver */
+  font-weight: bold; /* Kalın yap */
+}
+
+.clickable-cell a:hover {
+  text-decoration: underline; /* Üzerine gelince alt çizgi ekle */
+}
+
+/* Navigasyon Link stilleri */
+.tabs a {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 5px 5px 0 0;
+  transition: background-color 0.3s ease;
+  text-decoration: none; /* Link alt çizgisini kaldır */
+  color: #333; /* Metin rengi */
+}
+
+.tabs a.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.tabs a:hover:not(.active) {
+  background-color: #e2e6ea;
+}
+
+/* ========== GÜNCELLENECEK DOSYA: dashboard/src/App.css veya index.css ========== */
+
+/* ... mevcut stil kurallarınız ... */
+
+.experiment-detail-page {
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.experiment-detail-page h2,
+.experiment-detail-page h3 {
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.experiment-detail-page p {
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.code-block {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 5px;
+  overflow-x: auto; /* Yatay kaydırma çubuğu gerektiğinde */
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-size: 0.9em;
+  color: #555;
+  white-space: pre-wrap; /* Uzun satırları otomatik sar */
+  word-break: break-all; /* Uzun kelimeleri de kır */
+}
+
+/* Chart container stilleri */
+.chart-container {
+  position: relative;
+  height: 400px; /* Grafiğin yüksekliğini ayarlayın */
+  width: 100%;
+  margin-top: 20px;
+  background-color: #f8f8f8;
+  padding: 15px;
+  border-radius: 5px;
+}

@@ -1,5 +1,6 @@
-// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/ExperimentTracker.jsx ==========
+// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/ExperimentTracker.jsx (URL'den taskId Okuma) ==========
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom'; // useParams hook'u import edildi
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend
@@ -7,7 +8,8 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-function ExperimentTracker({ taskId }) {
+function ExperimentTracker() { // <-- taskId artık props olarak gelmiyor
+  const { taskId } = useParams(); // URL'den taskId'yi al
   const [status, setStatus] = useState(null); 
   const [chartData, setChartData] = useState({ 
     labels: [], 
@@ -59,12 +61,12 @@ function ExperimentTracker({ taskId }) {
             return {
               labels: [...prevData.labels, `Epoch ${epoch}`],
               datasets: [{
-                ...prevData.datasets[0], // Mevcut dataset özelliklerini koru
+                ...prevData.datasets[0], 
                 data: [...prevData.datasets[0].data, loss]
               }]
             };
           }
-          return prevData; // Zaten eklenmişse değişiklik yapma
+          return prevData;
         });
       }
     };
@@ -78,14 +80,13 @@ function ExperimentTracker({ taskId }) {
       console.log(`WebSocket disconnected for task ${taskId}`);
     };
 
-    // Bileşen DOM'dan kaldırıldığında WebSocket bağlantısını temizle
     return () => {
       if (ws.current) {
         ws.current.close();
-        ws.current = null; // Ref'i temizle
+        ws.current = null;
       }
     };
-  }, [taskId]); // Sadece taskId değiştiğinde yeniden bağlan
+  }, [taskId]); // taskId değiştiğinde yeniden bağlan
 
   const progressPercent = status?.details?.total_epochs 
     ? (status.details.epoch / status.details.total_epochs) * 100

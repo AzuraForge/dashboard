@@ -1,36 +1,31 @@
-// ========== DOSYA: dashboard/src/App.jsx ==========
+// ========== GÜNCELLENECEK DOSYA: dashboard/src/App.jsx (React Router Entegrasyonu) ==========
 import { useState } from 'react';
-import './App.css'; // Stil dosyasını import et
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'; // Router bileşenleri import edildi
+import './App.css'; 
 
 // Bileşenleri import et
 import ExperimentsList from './components/ExperimentsList';
 import NewExperiment from './components/NewExperiment';
 import ExperimentTracker from './components/ExperimentTracker';
+// Yeni oluşturacağımız deney detay sayfası bileşeni (şimdilik placeholder)
+import ExperimentDetailPage from './components/ExperimentDetailPage'; // Henüz yok, sonra oluşturacağız
 
 function App() {
-  const [activeTab, setActiveTab] = useState('new'); // Varsayılan olarak "Yeni Deney Başlat" sekmesini açalım
-  const [trackingTaskId, setTrackingTaskId] = useState(null); // Takip edilen görev ID'si
+  const [trackingTaskId, setTrackingTaskId] = useState(null);
+  const navigate = useNavigate(); // Programatik navigasyon için
+  const location = useLocation(); // Mevcut yolu almak için
 
   // Yeni bir deney başlatıldığında çağrılacak callback
   const handleExperimentStarted = (taskId) => {
     if (taskId) {
         setTrackingTaskId(taskId); // Takip edilecek görevi ayarla
-        setActiveTab('tracker');   // Canlı takip sekmesine otomatik geçiş yap
+        // Canlı takip sayfasına yönlendir
+        navigate(`/tracker/${taskId}`); // Yönlendirmeyi değiştiriyoruz
     }
   };
 
-  // Aktif sekmeye göre doğru bileşeni render et
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'new':
-        return <NewExperiment onExperimentStarted={handleExperimentStarted} />;
-      case 'tracker':
-        return <ExperimentTracker taskId={trackingTaskId} />;
-      case 'list':
-      default: // Varsayılan olarak listeyi göster
-        return <ExperimentsList />;
-    }
-  };
+  // Sekme butonlarının aktif durumunu belirlemek için yardımcı fonksiyon
+  const isActive = (path) => location.pathname === path || (path === '/tracker' && location.pathname.startsWith('/tracker/'));
 
   return (
     <div className="container">
@@ -40,16 +35,25 @@ function App() {
       </header>
       
       <nav className="tabs">
-          <button onClick={() => setActiveTab('list')} className={activeTab === 'list' ? 'active' : ''}>📊 Deney Listesi</button>
-          <button onClick={() => setActiveTab('new')} className={activeTab === 'new' ? 'active' : ''}>🚀 Yeni Deney Başlat</button>
-          {/* Sadece bir görev takip edildiğinde Canlı Takip sekmesini göster */}
+          {/* Link bileşenleri ile navigasyon */}
+          <Link to="/experiments" className={isActive('/experiments') ? 'active' : ''}>📊 Deney Listesi</Link>
+          <Link to="/new-experiment" className={isActive('/new-experiment') ? 'active' : ''}>🚀 Yeni Deney Başlat</Link>
+          
+          {/* Eğer bir görev takip ediliyorsa veya tracker sayfasındaysak canlı takip sekmesini göster */}
           {trackingTaskId && (
-            <button onClick={() => setActiveTab('tracker')} className={activeTab === 'tracker' ? 'active' : ''}>🛰️ Canlı Takip</button>
+            <Link to={`/tracker/${trackingTaskId}`} className={isActive('/tracker') ? 'active' : ''}>🛰️ Canlı Takip</Link>
           )}
       </nav>
 
       <main className="main-content">
-        {renderContent()}
+        {/* Routes ve Route bileşenleri ile sayfa yönlendirmesi */}
+        <Routes>
+          <Route path="/" element={<ExperimentsList />} /> {/* Ana sayfa */}
+          <Route path="/experiments" element={<ExperimentsList />} />
+          <Route path="/new-experiment" element={<NewExperiment onExperimentStarted={handleExperimentStarted} />} />
+          <Route path="/tracker/:taskId" element={<ExperimentTracker />} /> {/* Task ID'ye göre takip */}
+          <Route path="/experiments/:experimentId" element={<ExperimentDetailPage />} /> {/* Yeni deney detay sayfası */}
+        </Routes>
       </main>
     </div>
   );

@@ -1,5 +1,6 @@
-// ========== DOSYA: dashboard/src/components/ExperimentsList.jsx ==========
+// ========== GÜNCELLENECEK DOSYA: dashboard/src/components/ExperimentsList.jsx (Tıklanabilir Satırlar) ==========
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom'; // Link bileşeni import edildi
 import { fetchExperiments } from '../services/api';
 
 function ExperimentsList() {
@@ -17,15 +18,15 @@ function ExperimentsList() {
         setError('API sunucusuna bağlanılamadı. Servisin çalıştığından emin olun.');
         console.error(err);
       } finally {
-        if (loading) setLoading(false); // Sadece ilk yüklemede loading'i kapat
+        if (loading) setLoading(false);
       }
     };
     
-    getExperiments(); // İlk yüklemede çalıştır
-    const intervalId = setInterval(getExperiments, 5000); // Her 5 saniyede bir veriyi yenile
+    getExperiments();
+    const intervalId = setInterval(getExperiments, 5000);
     
-    return () => clearInterval(intervalId); // Bileşen kaldırıldığında interval'i temizle
-  }, [loading]); // 'loading' state'i değiştiğinde effect'i yeniden çalıştır
+    return () => clearInterval(intervalId);
+  }, [loading]);
 
   if (loading) return <p>Deneyler yükleniyor...</p>;
   if (error) return <p className="error">{error}</p>;
@@ -45,10 +46,16 @@ function ExperimentsList() {
         </thead>
         <tbody>
           {experiments.map((exp) => (
+            // Her bir satırı tıklanabilir hale getirmek için Link bileşenini kullanıyoruz
             <tr key={exp.id}>
-              <td className="exp-id">{exp.id}</td>
+              {/* Deney ID'sine göre detay sayfasına yönlendirme */}
+              <td className="exp-id clickable-cell" onClick={() => {}}> {/* onClick={() => {}} satırı tıklanabilir yapmak için eklenir, Link bunu zaten yapar */}
+                <Link to={`/experiments/${exp.id}`}>
+                  {exp.id}
+                </Link>
+              </td>
               <td><span className={`status-badge status-${exp.status?.toLowerCase() || 'unknown'}`}>{exp.status || 'Bilinmiyor'}</span></td>
-              <td>{exp.pipeline_name || exp.pipeline || 'N/A'}</td> {/* pipeline_name veya pipeline */}
+              <td>{exp.pipeline_name || exp.pipeline || 'N/A'}</td>
               <td>{exp.ticker || 'N/A'}</td>
               <td>{exp.final_loss !== undefined && exp.final_loss !== null ? exp.final_loss.toFixed(6) : 'N/A'}</td>
             </tr>
