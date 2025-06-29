@@ -1,154 +1,163 @@
 import { useState, useEffect, useMemo } from 'react';
-import { fetchExperiments } from '../services/api';
-import ExperimentCard from '../components/ExperimentCard';
+import { fetchExperiments, startNewExperiment } from '../services/api';
 import ExperimentsList from '../components/ExperimentsList';
+import ComparisonView from '../components/ComparisonView'; // YENİ: Karşılaştırma bileşeni
+import { toast } from 'react-toastify'; // YENİ: Bildirimler için
 import PropTypes from 'prop-types';
 
-function DashboardOverview({ onNewExperimentClick }) {
+function DashboardOverview({ onNewExperimentClick, setTrackingTaskId }) {
   const [experiments, setExperiments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // YENİ: Filtreleme ve Karşılaştırma için state'ler
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [selectedForComparison, setSelectedForComparison] = useState(new Set());
+  const [comparisonData, setComparisonData] = useState(null);
 
-  // Mevcut deneylerden dinamik olarak durum listesi oluşturur
   const allStatuses = useMemo(() => {
     if (experiments.length === 0) return ['ALL'];
     const statuses = new Set(experiments.map(exp => exp.status));
     return ['ALL', ...Array.from(statuses).sort()];
   }, [experiments]);
 
-  // Deneyleri API'dan çeker ve periyodik olarak günceller
+  const getExperiments = async (showLoadingIndicator = false) => {
+    if (showLoadingIndicator) setLoading(true);
+    try {
+      const response = await fetchExperiments();
+      // YENİ: Gelen veriyi başlangıç zamanına göre sırala
+      const sortedData = response.data.sort((a, b) => 
+        new Date(b.config.start_time) - new Date(a.config.start_time)
+      );
+      setExperiments(sortedData);
+      setError(null);
+    } catch (err) {
+      setError('API sunucusuna bağlanılamadı veya veri çekilemedi.');
+      console.error("Error fetching experiments:", err);
+    } finally {
+      if (showLoadingIndicator) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const getExperiments = async () => {
-      // Sadece ilk yüklemede tam ekran yükleme göstergesi göster
-      if (experiments.length === 0) {
-          setLoading(true);
-      }
-      try {
-        const response = await fetchExperiments();
-        setExperiments(response.data);
-        setError(null);
-      } catch (err) {
-        setError('API sunucusuna bağlanılamadı veya veri çekilemedi. Servislerin çalıştığından emin olun.');
-        console.error("Error fetching experiments for overview:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    getExperiments();
-    const intervalId = setInterval(getExperiments, 5000); 
-    
+    getExperiments(true); // İlk yüklemede loading göster
+    const intervalId = setInterval(() => getExperiments(false), 5000); 
     return () => clearInterval(intervalId);
-  }, [experiments.length]); // Sadece ilk yüklemede loading'i tetiklemek için `experiments.length` bağımlılığı
+  }, []);
 
-  // Filtrelenmiş ve aranmış deneyleri hesaplar
   const filteredExperiments = useMemo(() => {
-    let filtered = experiments;
+    return experiments.filter(exp => {
+      const statusMatch = filterStatus === 'ALL' || exp.status === filterStatus;
+      if (!statusMatch) return false;
 
-    // Durum filtresi
-    if (filterStatus !== 'ALL') {
-      filtered = filtered.filter(exp => exp.status === filterStatus);
-    }
-
-    // Arama terimi filtresi
-    if (searchTerm) {
-      const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      filtered = filtered.filter(exp => {
-        const config = exp.config || {};
-        const results = exp.results || {};
-        const pipeline_name = config.pipeline_name || '';
-        const ticker = config.data_sourcing?.ticker || '';
-        const experiment_id = exp.experiment_id || '';
-
-        return experiment_id.toLowerCase().includes(lowerCaseSearchTerm) ||
-               pipeline_name.toLowerCase().includes(lowerCaseSearchTerm) ||
-               ticker.toLowerCase().includes(lowerCaseSearchTerm);
-      });
-    }
-    return filtered;
+      if (searchTerm) {
+        const lowerCaseSearchTerm = searchTerm.toLowerCase();
+        return (exp.experiment_id?.toLowerCase().includes(lowerCaseSearchTerm) ||
+                exp.config?.pipeline_name?.toLowerCase().includes(lowerCaseSearchTerm) ||
+                exp.config?.data_sourcing?.ticker?.toLowerCase().includes(lowerCaseSearchTerm));
+      }
+      return true;
+    });
   }, [experiments, filterStatus, searchTerm]);
-
-
-  const runningExperiments = filteredExperiments.filter(exp => 
-    ['STARTED', 'PROGRESS', 'PENDING'].includes(exp.status)
-  );
   
-  const completedOrFailedExperiments = filteredExperiments.filter(exp => 
-    !runningExperiments.some(runningExp => runningExp.experiment_id === exp.experiment_id)
-  );
+  // YENİ: Karşılaştırma için seçimi yöneten fonksiyon
+  const handleComparisonSelect = (experimentId) => {
+    setSelectedForComparison(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(experimentId)) {
+        newSelection.delete(experimentId);
+      } else {
+        newSelection.add(experimentId);
+      }
+      return newSelection;
+    });
+  };
 
-  if (loading) {
-    return <p className="feedback info">Veriler yükleniyor...</p>;
-  }
+  // YENİ: Deneyi yeniden çalıştıran fonksiyon
+  const handleReRun = async (experimentConfig) => {
+    const configToReRun = { ...experimentConfig };
+    // Eski ID ve zaman bilgilerini temizle
+    delete configToReRun.experiment_id;
+    delete configToReRun.task_id;
+    delete configToReRun.start_time;
+
+    toast.info(`"${configToReRun.pipeline_name}" deneyi yeniden başlatılıyor...`);
+    try {
+      const response = await startNewExperiment(configToReRun);
+      const taskId = response.data.task_id;
+      toast.success(`Deney başarıyla gönderildi! ID: ${taskId}`);
+      setTrackingTaskId(taskId); // Canlı takibi başlat
+    } catch (err) {
+      toast.error('Deney yeniden başlatılamadı.');
+    }
+  };
+
+  // YENİ: Karşılaştırma panelini açan fonksiyon
+  const handleStartComparison = () => {
+    const dataToCompare = experiments.filter(exp => selectedForComparison.has(exp.experiment_id));
+    setComparisonData(dataToCompare);
+  };
+
+
+  if (loading) return <p className="feedback info">Deney verileri yükleniyor...</p>;
 
   return (
     <div className="dashboard-overview">
+      {/* YENİ: Karşılaştırma paneli (modal) */}
+      {comparisonData && (
+        <ComparisonView
+          experiments={comparisonData}
+          onClose={() => setComparisonData(null)}
+        />
+      )}
+
       <div className="page-header">
         <h1><span role="img" aria-label="dashboard">📊</span> Genel Bakış</h1>
-        <p>Tüm deneylerinizin durumunu ve son gelişmelerini takip edin.</p>
+        <p>Tüm deneylerinizin durumunu, geçmişini ve performansını karşılaştırın.</p>
       </div>
 
       {error && <p className="feedback error">{error}</p>}
 
       {!error && (
         <>
-          {/* Filtre ve Arama Alanları */}
           <div className="card" style={{ marginBottom: '25px', padding: '20px' }}>
-            <h3 style={{ marginTop: 0, color: 'white', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px'}}>Deneyleri Filtrele</h3>
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ marginTop: 0, border: 'none', padding: 0 }}>Deney Geçmişi ({filteredExperiments.length})</h3>
+                 {/* YENİ: Karşılaştırma butonu */}
+                <button 
+                  className="button-primary"
+                  onClick={handleStartComparison}
+                  disabled={selectedForComparison.size < 2}
+                  title={selectedForComparison.size < 2 ? 'Karşılaştırmak için en az 2 deney seçin' : ''}
+                >
+                  <span role="img" aria-label="scales">⚖️</span> Seçilenleri Karşılaştır ({selectedForComparison.size})
+                </button>
+             </div>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
               <div className="form-group" style={{ flex: '1 1 250px', minWidth: '200px', marginBottom: 0 }}>
-                <label htmlFor="search-term">Arama</label>
-                <input 
-                  type="text" 
-                  id="search-term" 
-                  placeholder="ID, Pipeline, Sembol ara..." 
-                  value={searchTerm} 
-                  onChange={(e) => setSearchTerm(e.target.value)} 
-                />
+                <label htmlFor="search-term">Arama (ID, Pipeline, Sembol)</label>
+                <input type="text" id="search-term" placeholder="Ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               <div className="form-group" style={{ flex: '1 1 150px', minWidth: '150px', marginBottom: 0 }}>
                 <label htmlFor="filter-status">Durum</label>
-                <select 
-                  id="filter-status" 
-                  value={filterStatus} 
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                >
-                  {allStatuses.map(status => (
-                    <option key={status} value={status}>{status === 'ALL' ? 'Tümü' : status}</option>
-                  ))}
+                <select id="filter-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                  {allStatuses.map(status => <option key={status} value={status}>{status === 'ALL' ? 'Tümü' : status}</option>)}
                 </select>
               </div>
             </div>
           </div>
-
-          <h2 className="section-title">
-            <span role="img" aria-label="running">⚡</span>
-            Çalışan Deneyler ({runningExperiments.length})
-          </h2>
-          {runningExperiments.length > 0 ? (
-            <div className="running-experiments-grid" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-                gap: '25px'
-            }}>
-              {runningExperiments.map(exp => (
-                <ExperimentCard key={exp.experiment_id} experiment={exp} />
-              ))}
-            </div>
+          
+          {filteredExperiments.length > 0 ? (
+            <ExperimentsList 
+              experiments={filteredExperiments}
+              selectedIds={selectedForComparison}
+              onSelect={handleComparisonSelect}
+              onReRun={handleReRun}
+              setTrackingTaskId={setTrackingTaskId}
+            />
           ) : (
-            <p className="feedback info">Şu anda çalışan bir deney bulunmamaktadır. <button onClick={onNewExperimentClick} className="button-link" style={{background: 'none', border: 'none', color: 'var(--primary-color)', textDecoration: 'underline', cursor: 'pointer', fontSize: '1em', padding: 0}}>Yeni bir deney başlatmak</button> ister misiniz?</p>
-          )}
-
-          <h2 className="section-title" style={{marginTop: '40px'}}>
-            <span role="img" aria-label="history">🗂️</span>
-            Deney Geçmişi ({completedOrFailedExperiments.length})
-          </h2>
-          {completedOrFailedExperiments.length > 0 ? (
-            <ExperimentsList experiments={completedOrFailedExperiments} />
-          ) : (
-            <p className="feedback info">Henüz tamamlanan veya başarısız olan bir deney bulunmamaktadır.</p>
+            <p className="feedback info">Filtrelerinize uyan bir deney bulunamadı. <button onClick={onNewExperimentClick} className="button-link" style={{background: 'none', border: 'none', color: 'var(--primary-color)', textDecoration: 'underline', cursor: 'pointer', fontSize: '1em', padding: 0}}>Yeni bir deney başlatmak</button> ister misiniz?</p>
           )}
         </>
       )}
@@ -158,6 +167,7 @@ function DashboardOverview({ onNewExperimentClick }) {
 
 DashboardOverview.propTypes = {
   onNewExperimentClick: PropTypes.func.isRequired,
+  setTrackingTaskId: PropTypes.func.isRequired,
 };
 
 export default DashboardOverview;

@@ -6,7 +6,7 @@
   --text-color: #e2e8f0; /* Açık gri metin */
   --text-color-darker: #94a3b8; /* Daha soluk metin */
   --bg-color: #0f172a; /* Ana Arkaplan (Çok Koyu Mavi/Siyah) */
-  --content-bg: #1e293b; /* Kart ve İçerik Arkaplanı (Koyu Gri/Mavi) */
+  --content-bg: #1e2b3b; /* Kart ve İçerik Arkaplanı (Koyu Gri/Mavi) */
   --border-color: #334155;
   --success-color: #22c55e;
   --error-color: #ef4444;
@@ -15,6 +15,20 @@
   --font-sans: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+}
+
+/* YENİ: React-Toastify için stil üzerine yazma */
+.Toastify__toast {
+  background-color: var(--content-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+}
+.Toastify__progress-bar {
+  background: var(--primary-color) !important;
+}
+.Toastify__close-button {
+  color: var(--text-color) !important;
 }
 
 /* Temel Reset ve Genel Stiller */
@@ -27,7 +41,6 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
 }
 
 #root, .app-layout {
@@ -45,6 +58,7 @@ body {
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
+  z-index: 2000; /* Sidebar'ın modal'ın üzerinde kalmaması için */
 }
 
 .sidebar h2 {
@@ -56,44 +70,21 @@ body {
   letter-spacing: 1px;
 }
 
-.sidebar nav ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
+.sidebar nav ul { list-style: none; padding: 0; margin: 0; }
 .sidebar nav a {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 12px 15px;
-  text-decoration: none;
-  color: var(--text-color-darker);
-  border-radius: 8px;
-  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 15px; padding: 12px 15px;
+  text-decoration: none; color: var(--text-color-darker);
+  border-radius: 8px; margin-bottom: 8px;
   transition: background-color 0.2s ease, color 0.2s ease;
   font-weight: 500;
 }
-
-.sidebar nav a:hover {
-  background-color: var(--content-bg);
-  color: var(--text-color);
-}
-
-.sidebar nav a.active {
-  background-color: var(--primary-color);
-  color: white;
-  font-weight: 600;
-}
+.sidebar nav a:hover { background-color: var(--content-bg); color: var(--text-color); }
+.sidebar nav a.active { background-color: var(--primary-color); color: white; font-weight: 600; }
 
 /* Ana İçerik Alanı */
 .main-content {
-  flex-grow: 1;
-  padding: 30px;
-  overflow-y: auto;
-  position: relative;
+  flex-grow: 1; padding: 30px; overflow-y: auto; position: relative;
 }
-
 /* Genel Başlık Stilleri */
 .page-header {
   margin-bottom: 30px;
@@ -128,11 +119,10 @@ body {
 .card {
   background-color: var(--content-bg);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 25px;
+  border-radius: 12px; padding: 25px;
   box-shadow: var(--shadow-md);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
 .card.clickable:hover {
   transform: translateY(-5px);
   box-shadow: 0 0 25px -5px rgba(66, 185, 131, 0.2);
@@ -249,60 +239,99 @@ body {
   opacity: 0.7;
 }
 
+
 /* Tablo Stilleri */
 .table-container {
   overflow-x: auto;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border: 1px solid var(--border-color); border-radius: 12px;
   background-color: var(--content-bg);
 }
 table { width: 100%; border-collapse: collapse; }
-table th, table td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
+table th, table td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: middle;}
 table th {
   background-color: var(--bg-color);
-  color: var(--text-color-darker);
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.85em;
+  color: var(--text-color-darker); font-weight: 600;
+  text-transform: uppercase; font-size: 0.85em;
   letter-spacing: 0.5px;
 }
 table tbody tr:hover { background-color: #2a3a52; }
+table tbody tr.selected-row { background-color: rgba(66, 185, 131, 0.1); }
 table tr:last-child td { border-bottom: none; }
 
-.clickable-cell a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
-.clickable-cell a:hover { text-decoration: underline; }
-.exp-id { font-family: monospace; color: var(--text-color-darker); }
+.exp-id { font-family: monospace; color: var(--text-color-darker); font-size: 0.9em; }
 
-/* Detaylı Görünüm Stilleri */
+/* YENİ: Hücre içi detaylar için */
+.detail-cell {
+  display: flex; flex-direction: column; gap: 4px; font-size: 0.9em;
+}
+.detail-cell strong { color: white; }
 
-.expanded-row-content {
-  display: flex;
-  gap: 25px;
-  padding: 25px;
-  background-color: var(--bg-color); /* Tablo başlığı ile aynı renk */
-  border-top: 1px solid var(--border-color);
+/* YENİ: Satır aksiyonları için */
+.actions-cell { position: relative; text-align: right !important; }
+.actions-button {
+  background: none; border: none; font-size: 24px; line-height: 1;
+  color: var(--text-color-darker); cursor: pointer; border-radius: 4px;
+  padding: 0 8px;
 }
-.detail-section {
-  flex: 1;
-  min-width: 0;
+.actions-button:hover { background-color: var(--border-color); color: white; }
+.actions-menu {
+  position: absolute; right: 20px; top: 50px;
+  background-color: #2a3a52; border: 1px solid var(--border-color);
+  border-radius: 8px; box-shadow: var(--shadow-lg);
+  z-index: 100; display: flex; flex-direction: column;
+  padding: 8px; min-width: 180px;
 }
-.detail-section h4 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: var(--primary-color);
-  font-size: 1.1em;
+.actions-menu button {
+  background: none; border: none; color: var(--text-color);
+  padding: 10px 15px; text-align: left;
+  cursor: pointer; border-radius: 6px; display: flex;
+  align-items: center; gap: 10px; font-size: 0.9em;
 }
-.code-block {
-  background-color: #0f172a; /* Ana arkaplanla aynı */
+.actions-menu button:hover { background-color: var(--secondary-color); color: white; }
+
+/* YENİ: Karşılaştırma Modalı Stilleri */
+.comparison-modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 5000;
+  display: flex; align-items: center; justify-content: center;
+}
+.comparison-modal-content {
+  background-color: var(--bg-color);
   border: 1px solid var(--border-color);
-  padding: 15px;
-  border-radius: 8px;
-  overflow-x: auto;
-  font-family: monospace;
-  font-size: 0.9em;
-  max-height: 300px;
+  border-radius: 16px;
+  width: 90%; max-width: 1200px;
+  height: 90vh;
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column;
 }
-.detail-chart-container {
-    height: 250px;
-    margin-bottom: 20px;
+.comparison-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 30px;
+  border-bottom: 1px solid var(--border-color);
+}
+.comparison-header h2 { margin: 0; font-size: 1.5em; }
+.comparison-modal-content .close-button {
+  background: none; border: none; font-size: 24px; color: var(--text-color-darker);
+  cursor: pointer; transition: color 0.2s;
+}
+.comparison-modal-content .close-button:hover { color: white; }
+.comparison-body {
+  padding: 30px;
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 30px;
+}
+.comparison-chart-container {
+  height: 400px;
+  min-height: 300px;
+  width: 100%;
+}
+.color-indicator {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
+  vertical-align: middle;
 }

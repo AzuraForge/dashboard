@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
-import ExperimentRow from './ExperimentRow'; // YENİ: ExperimentRow bileşenini import et
+import ExperimentRow from './ExperimentRow';
 
-function ExperimentsList({ experiments }) {
+// GÜNCELLEME: Yeni propları alacak şekilde düzenlendi
+function ExperimentsList({ experiments, selectedIds, onSelect, onReRun, setTrackingTaskId }) {
   if (!experiments || experiments.length === 0) {
     return <p className="feedback info">Henüz gösterilecek bir deney bulunamadı.</p>;
   }
@@ -11,18 +12,25 @@ function ExperimentsList({ experiments }) {
       <table>
         <thead>
           <tr>
-            <th>Deney ID</th>
+            <th style={{width: '40px'}}></th> {/* Checkbox için boş başlık */}
             <th>Durum</th>
-            <th>Pipeline</th>
-            <th>Sembol</th>
-            <th>Final Kayıp</th>
-            <th>Bitiş Tarihi</th>
+            <th>Deney Detayları</th>
+            <th>Parametreler</th>
+            <th>Sonuçlar</th>
+            <th>Zamanlama</th>
+            <th style={{width: '50px'}}>Aksiyon</th>
           </tr>
         </thead>
         <tbody>
-          {/* DÜZELTME: Her bir deney için ExperimentRow bileşenini render et */}
           {experiments.map((exp) => (
-            <ExperimentRow key={exp.experiment_id} experiment={exp} />
+            <ExperimentRow 
+              key={exp.experiment_id} 
+              experiment={exp} 
+              isSelected={selectedIds.has(exp.experiment_id)}
+              onSelect={() => onSelect(exp.experiment_id)}
+              onReRun={() => onReRun(exp.config)}
+              setTrackingTaskId={setTrackingTaskId}
+            />
           ))}
         </tbody>
       </table>
@@ -32,6 +40,10 @@ function ExperimentsList({ experiments }) {
 
 ExperimentsList.propTypes = {
   experiments: PropTypes.array.isRequired,
+  selectedIds: PropTypes.object.isRequired,
+  onSelect: PropTypes.func.isRequired,
+  onReRun: PropTypes.func.isRequired,
+  setTrackingTaskId: PropTypes.func.isRequired,
 };
 
 export default ExperimentsList;
