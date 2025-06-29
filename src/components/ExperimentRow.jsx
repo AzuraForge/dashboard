@@ -21,21 +21,27 @@ function ExperimentRow({ experiment, isSelected, onSelect, onReRun, setTrackingT
     toast.success('Konfigürasyon panoya kopyalandı!');
     setActionsOpen(false);
   };
+
   const isRunning = ['STARTED', 'PROGRESS', 'PENDING'].includes(status);
+
+  // DÜZELTME: Savunmacı (defensive) kodlama
+  const finalLoss = results?.final_loss;
+  const displayLoss = (finalLoss !== null && finalLoss !== undefined) ? finalLoss.toFixed(6) : 'N/A';
+
   return (
     <tr className={isSelected ? 'selected-row' : ''}>
       <td><input type="checkbox" checked={isSelected} onChange={onSelect} title="Karşılaştırmak için seç"/></td>
       <td><span className={`status-badge status-${status?.toLowerCase() || 'unknown'}`}>{status || 'Bilinmiyor'}</span></td>
       <td><div className="detail-cell"><strong>{config?.pipeline_name || 'N/A'}</strong><span className="exp-id">{experiment_id}</span></div></td>
       <td><div className="detail-cell"><span>Ticker: <strong>{config?.data_sourcing?.ticker || 'N/A'}</strong></span><span>Epochs: <strong>{config?.training_params?.epochs || 'N/A'}</strong>, LR: <strong>{config?.training_params?.lr || 'N/A'}</strong></span></div></td>
-      <td><div className="detail-cell"><span>Final Kayıp: <strong>{results?.final_loss !== undefined ? results.final_loss.toFixed(6) : 'N/A'}</strong></span></div></td>
+      <td><div className="detail-cell"><span>Final Kayıp: <strong>{displayLoss}</strong></span></div></td>
       <td><div className="detail-cell"><span>Başlangıç: {new Date(config.start_time).toLocaleString()}</span><span>Bitiş: {completed_at || failed_at ? new Date(completed_at || failed_at).toLocaleString() : 'N/A'}</span></div></td>
       <td className="actions-cell">
         <button className="actions-button" onClick={() => setActionsOpen(!actionsOpen)}>⋮</button>
         {actionsOpen && (
           <div className="actions-menu" onMouseLeave={() => setActionsOpen(false)}>
             {isRunning && <button onClick={() => { setTrackingTaskId(task_id); setActionsOpen(false); }}><Icon path={ICONS.satellite} /> Canlı İzle</button>}
-            <button onClick={() => { onReRun(); setActionsOpen(false); }}><Icon path={ICONS.rerun} /> Yeniden Çalıştır</button>
+            <button onClick={() => { onReRun(config); setActionsOpen(false); }}><Icon path={ICONS.rerun} /> Yeniden Çalıştır</button>
             <button onClick={handleCopyConfig}><Icon path={ICONS.copy} /> Config'i Kopyala</button>
           </div>
         )}
