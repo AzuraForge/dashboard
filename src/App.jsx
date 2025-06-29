@@ -6,21 +6,21 @@ import './App.css';
 import NewExperiment from './components/NewExperiment';
 import ExperimentDetailPage from './components/ExperimentDetailPage'; 
 import DashboardOverview from './pages/DashboardOverview';
-import LiveTrackerPane from './components/LiveTrackerPane'; // YENİ: Canlı takip paneli
+import LiveTrackerPane from './components/LiveTrackerPane';
 
 function App() {
-  const [trackingTaskId, setTrackingTaskId] = useState(null); // Canlı takip edilen görev ID'si
+  const [trackingTaskId, setTrackingTaskId] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleExperimentStarted = (taskId) => {
     if (taskId) {
-        setTrackingTaskId(taskId); // SADECE state'i güncelle, yönlendirme yok!
+        setTrackingTaskId(taskId);
     }
   };
   
   const handleCloseTracker = () => {
-    setTrackingTaskId(null); // Takip panelini kapat
+    setTrackingTaskId(null);
   };
 
   const isActive = (path) => {
@@ -36,12 +36,14 @@ function App() {
           <ul>
             <li>
               <Link to="/experiments" className={isActive('/experiments') ? 'active' : ''}>
-                <span role="img" aria-label="dashboard">📊</span> Genel Bakış
+                <span role="img" aria-label="dashboard">📊</span>
+                <span>Genel Bakış</span>
               </Link>
             </li>
             <li>
               <Link to="/new-experiment" className={isActive('/new-experiment') ? 'active' : ''}>
-                <span role="img" aria-label="rocket">🚀</span> Yeni Deney Başlat
+                <span role="img" aria-label="rocket">🚀</span>
+                <span>Yeni Deney</span>
               </Link>
             </li>
           </ul>
@@ -49,7 +51,6 @@ function App() {
       </aside>
 
       <main className="main-content">
-        {/* YENİ: Canlı takip paneli burada, rotaların üstünde render edilecek */}
         {trackingTaskId && (
           <LiveTrackerPane 
             taskId={trackingTaskId} 
@@ -68,7 +69,6 @@ function App() {
           />} />
           <Route path="/new-experiment" element={<NewExperiment onExperimentStarted={handleExperimentStarted} />} />
           <Route path="/experiments/:experimentId" element={<ExperimentDetailPage />} />
-          {/* /tracker/:taskId rotası kaldırıldı */}
         </Routes>
       </main>
     </div>

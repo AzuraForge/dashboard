@@ -1,5 +1,4 @@
-// ========== GÜNCELLENECEK DOSYA: dashboard/src/pages/DashboardOverview.jsx ==========
-import { useState, useEffect, useMemo } from 'react'; // useMemo eklendi
+import { useState, useEffect, useMemo } from 'react';
 import { fetchExperiments } from '../services/api';
 import ExperimentCard from '../components/ExperimentCard';
 import ExperimentsList from '../components/ExperimentsList';
@@ -9,8 +8,8 @@ function DashboardOverview({ onExperimentSelect, onNewExperimentClick }) {
   const [experiments, setExperiments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState(''); // Yeni: Arama terimi
-  const [filterStatus, setFilterStatus] = useState('ALL'); // Yeni: Durum filtresi
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('ALL');
 
   const allStatuses = useMemo(() => {
     const statuses = new Set(experiments.map(exp => exp.status));
@@ -81,7 +80,7 @@ function DashboardOverview({ onExperimentSelect, onNewExperimentClick }) {
     exp.status === 'STARTED' || exp.status === 'PROGRESS'
   );
   const completedOrFailedExperiments = filteredExperiments.filter(exp => 
-    exp.status === 'SUCCESS' || exp.status === 'FAILURE' || exp.status === 'ERROR' || exp.status === 'DISCONNECTED' || exp.status === 'UNKNOWN'
+    !runningExperiments.some(runningExp => runningExp.id === exp.id)
   );
 
   return (
@@ -96,7 +95,6 @@ function DashboardOverview({ onExperimentSelect, onNewExperimentClick }) {
 
       {!loading && !error && (
         <>
-          {/* Filtre ve Arama Alanları */}
           <div className="card" style={{ marginBottom: '25px', padding: '20px' }}>
             <h3 style={{ marginTop: 0 }}>Deneyleri Filtrele</h3>
             <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
@@ -127,8 +125,10 @@ function DashboardOverview({ onExperimentSelect, onNewExperimentClick }) {
             </div>
           </div>
 
-
-          <h2 className="section-title">Çalışan Deneyler ({runningExperiments.length})</h2>
+          <h2 className="section-title">
+            <span role="img" aria-label="running">⚡</span>
+            Çalışan Deneyler ({runningExperiments.length})
+          </h2>
           {runningExperiments.length === 0 ? (
             <p className="feedback info">Şu anda çalışan bir deney bulunmamaktadır. <button onClick={onNewExperimentClick} className="button-link">Yeni bir deney başlatmak</button> ister misiniz?</p>
           ) : (
@@ -139,7 +139,10 @@ function DashboardOverview({ onExperimentSelect, onNewExperimentClick }) {
             </div>
           )}
 
-          <h2 className="section-title">Son Tamamlanan/Başarısız Olan Deneyler ({completedOrFailedExperiments.length})</h2>
+          <h2 className="section-title">
+            <span role="img" aria-label="history">🗂️</span>
+            Deney Geçmişi ({completedOrFailedExperiments.length})
+          </h2>
           {completedOrFailedExperiments.length === 0 ? (
             <p className="feedback info">Henüz tamamlanan veya başarısız olan bir deney bulunmamaktadır.</p>
           ) : (
