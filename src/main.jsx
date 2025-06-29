@@ -1,7 +1,8 @@
-import { StrictMode } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { Chart } from 'chart.js';
+// GÜNCELLEME: Filler eklentisini Chart'tan import ediyoruz
+import { Chart, Filler } from 'chart.js';
 import { ThemeProvider } from './context/ThemeContext';
 
 // Fontsource paketinden Inter fontunu ve stillerini import et
@@ -15,35 +16,29 @@ import './index.css';
 import './App.css';
 import App from './App.jsx';
 
-// --- GÜNCELLENMİŞ GLOBAL CHART.JS AYARLARI ---
+// GÜNCELLEME: Filler eklentisini Chart.js'e kaydediyoruz
+Chart.register(Filler);
+
 const setupChartDefaults = (theme = 'dark') => {
   try {
     const styles = getComputedStyle(document.body);
     const textColorDarker = styles.getPropertyValue('--text-color-darker').trim();
     const borderColor = styles.getPropertyValue('--border-color').trim();
 
-    // Global varsayılanları ayarla. Bu, eksenler, başlıklar ve etiketler dahil tüm metinleri etkiler.
     Chart.defaults.color = textColorDarker; 
     Chart.defaults.borderColor = borderColor;
     Chart.defaults.font.family = "'Inter', sans-serif";
-
-    // Chart.overrides satırları KALDIRILDI. Bu özellik artık Chart.js v4'te mevcut değil.
-    // Yukarıdaki global ayarlar yeterlidir.
-
   } catch (e) {
     console.error("Chart.js varsayılanları ayarlanırken bir hata oluştu:", e);
   }
 };
 
-// İlk yüklemede ve tema değişimlerinde çalışacak
 setTimeout(() => setupChartDefaults(), 100);
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <ThemeProvider setupChartDefaults={setupChartDefaults}>
-      <BrowserRouter> 
-        <App />
-      </BrowserRouter>
-    </ThemeProvider>
-  </StrictMode>,
+  <ThemeProvider setupChartDefaults={setupChartDefaults}>
+    <BrowserRouter> 
+      <App />
+    </BrowserRouter>
+  </ThemeProvider>
 );
