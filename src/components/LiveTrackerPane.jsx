@@ -1,124 +1,124 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
-import 'chart.js/auto'; // Chart.js'in tüm bileşenleri otomatik kaydetmesini sağlar
-import annotationPlugin from 'chartjs-plugin-annotation';
 import { Chart } from 'chart.js';
+import 'chart.js/auto';
+import annotationPlugin from 'chartjs-plugin-annotation';
+import { getCssVar } from '../utils/cssUtils'; // YENİ: Yardımcı fonksiyonu import et
 
-// Anotasyon eklentisini kaydet
 Chart.register(annotationPlugin);
 
 function LiveTrackerPane({ taskId, onClose }) {
   const [statusData, setStatusData] = useState({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
   const [chartData, setChartData] = useState({ labels: [], datasets: [{ data: [] }] });
-  
-  // Ping animasyonu için state
   const [pingAnnotation, setPingAnnotation] = useState(null);
   
-  // WebSocket nesnesini saklamak için ref (BİLEŞENİN İÇİNDE)
   const socketRef = useRef(null);
   
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: {
-      duration: 400,
-      easing: 'easeInOutQuad',
-    },
-    plugins: { 
-      legend: { display: false }, 
-      tooltip: {
-        enabled: true,
-        backgroundColor: 'var(--content-bg)',
-        borderColor: 'var(--border-color)',
-        borderWidth: 1,
-        padding: 10,
-        titleFont: { weight: 'bold' },
-        bodyFont: { size: 14 },
-        displayColors: false,
-        callbacks: {
-          label: (context) => `Kayıp: ${context.parsed.y.toFixed(6)}`,
-        }
-      },
-      annotation: {
-        animations: {
-          numbers: {
-            properties: ['radius'],
-            duration: 1000,
+  // --- GRAFİK SEÇENEKLERİ NİHAİ SÜRÜM ---
+  // useMemo kullanarak, bu seçeneklerin sadece bir kez hesaplanmasını sağlıyoruz.
+  const chartOptions = useMemo(() => {
+    // CSS değişkenlerinden renkleri al
+    const primaryColor = getCssVar('--primary-color');
+    const textColor = getCssVar('--text-color');
+    const textColorDarker = getCssVar('--text-color-darker');
+    const borderColor = getCssVar('--border-color');
+    const contentBg = getCssVar('--content-bg');
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300, easing: 'linear' },
+      plugins: { 
+        legend: { display: false }, 
+        tooltip: {
+          enabled: true,
+          backgroundColor: contentBg,
+          titleColor: textColor,
+          bodyColor: textColor,
+          borderColor: borderColor,
+          borderWidth: 1,
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            title: (context) => context[0].label,
+            label: (context) => `Kayıp: ${context.parsed.y.toFixed(6)}`,
           }
         },
-        annotations: {
-          ...(pingAnnotation && { ping: pingAnnotation })
+        annotation: {
+          animations: { numbers: { properties: ['radius'], duration: 1000 } },
+          annotations: { ...(pingAnnotation && { ping: pingAnnotation }) }
         }
+      },
+      scales: { 
+        y: { 
+          grid: { color: borderColor, borderDash: [2, 4], drawTicks: false },
+          ticks: { padding: 10, maxTicksLimit: 5, font: { size: 12 }, color: textColorDarker },
+        }, 
+        x: {
+          grid: { display: false },
+          ticks: { padding: 10, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, font: { size: 12 }, color: textColorDarker },
+        } 
       }
-    },
-    scales: { 
-      y: { 
-        beginAtZero: false,
-        grid: { color: 'var(--border-color)', borderDash: [2, 4] },
-        ticks: { maxTicksLimit: 5, font: { size: 10 } },
-      }, 
-      x: {
-        grid: { display: false },
-        ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7, font: { size: 10 } },
-      } 
-    }
-  };
+    };
+  }, [pingAnnotation]); // Sadece ping animasyonu değiştiğinde seçenekleri yeniden hesapla
 
   useEffect(() => {
     if (!taskId) return;
 
     setStatusData({ state: 'CONNECTING', details: { status_text: 'Worker\'a bağlanılıyor...' } });
+    
+    // Dataset'i renklerle birlikte başlangıçta ayarla
     setChartData({
       labels: [],
       datasets: [{
-        label: 'Eğitim Kaybı', data: [], borderColor: 'var(--primary-color)',
-        backgroundColor: 'color-mix(in srgb, var(--primary-color) 20%, transparent)',
-        pointBackgroundColor: 'var(--primary-color)', pointBorderColor: 'var(--text-inverse)',
-        pointHoverBackgroundColor: 'var(--text-inverse)', pointHoverBorderColor: 'var(--primary-color)',
-        pointRadius: 3, pointHoverRadius: 6, tension: 0.3, fill: true, borderWidth: 2,
+        label: 'Eğitim Kaybı', data: [],
+        fill: true,
+        borderColor: getCssVar('--primary-color'),
+        backgroundColor: 'color-mix(in srgb, ' + getCssVar('--primary-color') + ' 20%, transparent)',
+        tension: 0.4, borderWidth: 2,
+        pointRadius: (ctx) => ctx.dataIndex === ctx.dataset.data.length - 1 ? 6 : 0,
+        pointBorderColor: getCssVar('--text-inverse'),
+        pointBackgroundColor: getCssVar('--primary-color'),
+        pointHoverRadius: 8,
       }]
     });
 
-    const socket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
-    socketRef.current = socket;
+    const newSocket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
+    socketRef.current = newSocket;
     
-    socket.onmessage = (event) => {
+    newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setStatusData(data);
-
+      
       if (data.state === 'PROGRESS' && data.details?.loss !== undefined) {
         setChartData(prev => {
           const epochLabel = `E${data.details.epoch}`;
           if (prev.labels.includes(epochLabel)) return prev;
-          
           const newLabels = [...prev.labels, epochLabel].slice(-30);
           const newLossData = [...prev.datasets[0].data, data.details.loss].slice(-30);
-          
           setPingAnnotation({
             type: 'point', xValue: epochLabel, yValue: data.details.loss,
-            radius: 15, backgroundColor: 'color-mix(in srgb, var(--primary-color) 25%, transparent)',
-            borderColor: 'var(--primary-color)', borderWidth: 2, borderDash: [6, 6]
+            radius: 15, backgroundColor: 'color-mix(in srgb, ' + getCssVar('--primary-color') + ' 25%, transparent)',
+            borderColor: getCssVar('--primary-color'), borderWidth: 2, borderDash: [6, 6]
           });
           setTimeout(() => setPingAnnotation(null), 1000);
-
           return { ...prev, datasets: [{ ...prev.datasets[0], data: newLossData }], labels: newLabels };
         });
       } else if (data.result?.results?.loss) {
         const finalLossHistory = data.result.results.loss;
-        setChartData(prev => {
-          const newLabels = Array.from({ length: finalLossHistory.length }, (_, i) => `E${i + 1}`);
-          return { ...prev, labels: newLabels, datasets: [{ ...prev.datasets[0], data: finalLossHistory }] };
-        });
+        setChartData(prev => ({
+          ...prev,
+          labels: Array.from({ length: finalLossHistory.length }, (_, i) => `E${i + 1}`),
+          datasets: [{ ...prev.datasets[0], data: finalLossHistory }]
+        }));
       }
     };
     
-    socket.onerror = () => { setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } }); };
-    socket.onclose = () => { setStatusData(prev => (['SUCCESS', 'FAILURE', 'ERROR'].includes(prev.state)) ? prev : { ...prev, state: 'DISCONNECTED' }); };
+    newSocket.onerror = () => setStatusData({ state: 'ERROR', details: { status_text: 'WebSocket bağlantı hatası!' } });
+    newSocket.onclose = () => setStatusData(prev => (['SUCCESS', 'FAILURE', 'ERROR'].includes(prev.state)) ? prev : { ...prev, state: 'DISCONNECTED' });
     
-    return () => {
-      socket.close(1000, "Component unmounting");
-    };
+    return () => { newSocket.close(1000, "Component unmounting"); };
   }, [taskId]);
   
   const { state, details, result } = statusData;
