@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, TimeScale, Title, Tooltip, Legend } from 'chart.js';
-import 'chartjs-adapter-date-fns'; // Zaman serisi için adaptör
+// DÜZELTME: Filler eklentisini import et
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, TimeScale, Title, Tooltip, Legend, Filler } from 'chart.js';
+import 'chartjs-adapter-date-fns';
 import { fetchExperimentDetails } from '../services/api';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, TimeScale, Title, Tooltip, Legend);
+// DÜZELTME: Filler'ı kaydet
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, TimeScale, Title, Tooltip, Legend, Filler);
 
 const chartOptions = (title) => ({
     responsive: true,
@@ -15,7 +17,11 @@ const chartOptions = (title) => ({
     plugins: {
         legend: { position: 'top' },
         title: { display: true, text: title, font: { size: 16 } }
-    }
+    },
+    interaction: {
+        intersect: false,
+        mode: 'index',
+    },
 });
 
 function ReportViewer() {
@@ -45,6 +51,7 @@ function ReportViewer() {
     if (!details) return <div className="card"><p>Deney detayı bulunamadı.</p></div>;
 
     const { config, results } = details;
+    // DÜZELTME: Verinin varlığını güvenli bir şekilde kontrol et
     const lossHistory = results?.history?.loss || [];
     const predictionData = {
         labels: results?.time_index || [],
@@ -53,14 +60,14 @@ function ReportViewer() {
                 label: 'Gerçek Değerler',
                 data: results?.y_true || [],
                 borderColor: 'rgb(54, 162, 235)',
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
                 pointRadius: 1,
+                fill: 'origin'
             },
             {
                 label: 'Tahmin Edilen Değerler',
                 data: results?.y_pred || [],
                 borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
                 borderDash: [5, 5],
                 pointRadius: 1,
             }
@@ -89,15 +96,15 @@ function ReportViewer() {
 
             <div className="card" style={{marginBottom: '20px'}}>
                 <h2>Performans Özeti</h2>
-                <div style={{display: 'flex', gap: '20px'}}>
-                    <p><strong>R² Skoru:</strong> {results?.metrics?.r2_score?.toFixed(4) || 'N/A'}</p>
-                    <p><strong>MAE:</strong> {results?.metrics?.mae?.toFixed(4) || 'N/A'}</p>
-                    <p><strong>Final Kayıp:</strong> {results?.final_loss?.toFixed(6) || 'N/A'}</p>
+                <div style={{display: 'flex', gap: '20px', flexWrap: 'wrap'}}>
+                    <p><strong>R² Skoru:</strong> {results?.metrics?.r2_score?.toFixed(4) ?? 'N/A'}</p>
+                    <p><strong>MAE:</strong> {results?.metrics?.mae?.toFixed(4) ?? 'N/A'}</p>
+                    <p><strong>Final Kayıp:</strong> {results?.final_loss?.toFixed(6) ?? 'N/A'}</p>
                 </div>
             </div>
 
             <div className="card" style={{height: '500px', marginBottom: '20px'}}>
-                 <Line options={{...chartOptions('Tahmin vs Gerçek Değerler'), scales: {x: {type: 'time'}}}} data={predictionData} />
+                 <Line options={{...chartOptions('Tahmin vs Gerçek Değerler'), scales: {x: {type: 'time', time: {unit: 'year'}}}}} data={predictionData} />
             </div>
 
             <div className="card" style={{height: '400px', marginBottom: '20px'}}>
@@ -106,7 +113,7 @@ function ReportViewer() {
             
             <div className="card">
                 <h2>Deney Konfigürasyonu</h2>
-                <pre style={{backgroundColor: 'var(--bg-color)', padding: '15px', borderRadius: '8px', whiteSpace: 'pre-wrap'}}>
+                <pre style={{backgroundColor: 'var(--bg-color)', padding: '15px', borderRadius: '8px', whiteSpace: 'pre-wrap', maxHeight: '400px', overflowY: 'auto'}}>
                     <code>{JSON.stringify(config, null, 2)}</code>
                 </pre>
             </div>
