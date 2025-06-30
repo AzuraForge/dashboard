@@ -2,75 +2,113 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { fetchExperimentReport } from '../services/api';
-import { API_BASE_URL } from '../services/api';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, TimeScale, Title, Tooltip, Legend } from 'chart.js';
+import 'chartjs-adapter-date-fns'; // Zaman serisi için adaptör
+import { fetchExperimentDetails } from '../services/api';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, TimeScale, Title, Tooltip, Legend);
+
+const chartOptions = (title) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { position: 'top' },
+        title: { display: true, text: title, font: { size: 16 } }
+    }
+});
 
 function ReportViewer() {
     const { experimentId } = useParams();
-    const [reportContent, setReportContent] = useState('');
+    const [details, setDetails] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const getReport = async () => {
+        const getDetails = async () => {
             setLoading(true);
             try {
-                const response = await fetchExperimentReport(experimentId);
-                setReportContent(response.data);
+                const response = await fetchExperimentDetails(experimentId);
+                setDetails(response.data);
                 setError(null);
             } catch (err) {
-                setError(`Rapor yüklenemedi: ${err.response?.data?.detail || err.message}`);
-                setReportContent('');
+                setError(`Rapor detayları yüklenemedi: ${err.response?.data?.detail || err.message}`);
             } finally {
                 setLoading(false);
             }
         };
-        getReport();
+        getDetails();
     }, [experimentId]);
 
-    // Markdown içindeki göreceli imaj yollarını (images/...) mutlak API yollarına dönüştür
-    const transformImageUrl = (uri) => {
-        if (uri.startsWith('images/')) {
-            // Rapor dosyaları reports/<pipeline_name>/<experiment_id>/report.md şeklinde.
-            // Bu yüzden imaj yolu da bu yapıya göre oluşturulmalı.
-            // Ancak experiment_id'yi URL'den aldığımız için, tam yolu API'de çözmek daha mantıklı.
-            // Şimdilik API endpoint'ine experiment_id ile birlikte imaj adını da gönderelim.
-            // Bu yaklaşım yerine, rapor klasörünü statik olarak sunmak daha iyi bir çözüm olabilir.
-            // Geçici Çözüm: Rapor dosyalarının public bir klasörde olduğunu varsayalım.
-            // Docker'da /app/reports dizinini /reports olarak sunacak bir yapı lazım.
-            // ŞİMDİLİK en basit yol: API'yi bir proxy olarak kullanmak.
-            // Bunun için API'ye yeni bir endpoint eklemek gerekir. Şimdilik bu kısmı atlayıp
-            // imajların kırık görünmesini kabul edelim ve sonraki fazda düzeltelim.
-            // VEYA daha basit bir yol deneyelim:
-            // Raporlar, `api` servisinin `reports` adlı bir alt klasöründe bulunur.
-            // API'yi `http://localhost:8000`'da çalıştırdığımızı varsayarsak, imaj URL'si
-            // `http://localhost:8000/reports/<exp_id>/images/imaj.png` olmalı.
-            // Bunun için FastAPI'de statik dosya sunumu yapmak gerekir.
-            return `${API_BASE_URL}/experiments/${experimentId}/report/${uri}`; // Bu endpoint henüz yok, sonraki adımda ekleyebiliriz.
-            // ŞİMDİLİK bu kısmı pas geçip sadece metni gösterelim.
-        }
-        return uri;
-    };
-
-
-    if (loading) return <p>Rapor yükleniyor...</p>;
+    if (loading) return <div className="card"><p>Rapor Yükleniyor...</p></div>;
     if (error) return <div className="card" style={{borderColor: 'var(--error-color)'}}><p>{error}</p><Link to="/">Geri Dön</Link></div>;
+    if (!details) return <div className="card"><p>Deney detayı bulunamadı.</p></div>;
+
+    const { config, results } = details;
+    const lossHistory = results?.history?.loss || [];
+    const predictionData = {
+        labels: results?.time_index || [],
+        datasets: [
+            {
+                label: 'Gerçek Değerler',
+                data: results?.y_true || [],
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                pointRadius: 1,
+            },
+            {
+                label: 'Tahmin Edilen Değerler',
+                data: results?.y_pred || [],
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                borderDash: [5, 5],
+                pointRadius: 1,
+            }
+        ]
+    };
+    
+    const lossData = {
+        labels: lossHistory.map((_, i) => `Epoch ${i + 1}`),
+        datasets: [{
+            label: 'Eğitim Kaybı',
+            data: lossHistory,
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+        }]
+    };
 
     return (
         <div className="report-viewer">
             <div className="page-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <div>
-                    <h1>Deney Raporu</h1>
+                    <h1>{config?.pipeline_name} Deney Raporu</h1>
                     <p style={{fontFamily: 'var(--font-mono)', color: 'var(--text-color-darker)'}}>{experimentId}</p>
                 </div>
-                <Link to="/" className="button-primary" style={{textDecoration: 'none'}}>← Geri Dön</Link>
+                <Link to="/" className="button-primary" style={{textDecoration: 'none'}}>← Genel Bakış'a Dön</Link>
             </div>
-            <div className="card" style={{padding: '40px'}}>
-                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {reportContent}
-                </ReactMarkdown>
+
+            <div className="card" style={{marginBottom: '20px'}}>
+                <h2>Performans Özeti</h2>
+                <div style={{display: 'flex', gap: '20px'}}>
+                    <p><strong>R² Skoru:</strong> {results?.metrics?.r2_score?.toFixed(4) || 'N/A'}</p>
+                    <p><strong>MAE:</strong> {results?.metrics?.mae?.toFixed(4) || 'N/A'}</p>
+                    <p><strong>Final Kayıp:</strong> {results?.final_loss?.toFixed(6) || 'N/A'}</p>
+                </div>
+            </div>
+
+            <div className="card" style={{height: '500px', marginBottom: '20px'}}>
+                 <Line options={{...chartOptions('Tahmin vs Gerçek Değerler'), scales: {x: {type: 'time'}}}} data={predictionData} />
+            </div>
+
+            <div className="card" style={{height: '400px', marginBottom: '20px'}}>
+                <Line options={chartOptions('Model Öğrenme Eğrisi')} data={lossData} />
+            </div>
+            
+            <div className="card">
+                <h2>Deney Konfigürasyonu</h2>
+                <pre style={{backgroundColor: 'var(--bg-color)', padding: '15px', borderRadius: '8px', whiteSpace: 'pre-wrap'}}>
+                    <code>{JSON.stringify(config, null, 2)}</code>
+                </pre>
             </div>
         </div>
     );
