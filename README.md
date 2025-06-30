@@ -1,12 +1,32 @@
-# React + Vite
+# AzuraForge Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Bu proje, AzuraForge platformunun kullanıcı arayüzüdür. React ve Vite kullanılarak geliştirilmiştir.
 
-Currently, two official plugins are available:
+## ✨ Ana Yetenekler
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+*   Sistemde mevcut olan tüm AI pipeline'larını listeleme ve yeni deneyler başlatma.
+*   Geçmişte çalıştırılmış tüm deneylerin sonuçlarını görüntüleme ve filtreleme.
+*   Seçilen deneyleri tek bir ekranda karşılaştırarak performanslarını analiz etme.
+*   Devam eden bir deneyi, anlık kayıp ve tahmin grafikleriyle **canlı olarak takip etme**.
+*   Tamamlanan deneyler için oluşturulmuş interaktif raporları görüntüleme.
 
-## Expanding the ESLint configuration
+## 🚀 Yerel Geliştirme Ortamı
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Bu projeyi yerel ortamda çalıştırmak için, ana `platform` reposundaki **[Geliştirme Rehberi](../../platform/docs/DEVELOPMENT_GUIDE.md)**'ni takip edin.
+
+Proje bağımlılıkları kurulduktan sonra, aşağıdaki komutlarla geliştirme sunucusunu başlatabilir ve testleri çalıştırabilirsiniz.
+
+**Geliştirme Sunucusunu Başlatma:**
+```bash
+# dashboard/ kök dizinindeyken
+npm run dev
+```
+Uygulama `http://localhost:5173` adresinde erişilebilir olacaktır.
+
+**Lint Kontrolü:**
+```bash
+npm run lint
+```
+
+**Not:** Dashboard'un tam olarak çalışabilmesi için `api` servisinin `http://localhost:8000` adresinde çalışıyor olması gerekmektedir.
+```
