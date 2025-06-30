@@ -7,7 +7,6 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import 'chartjs-adapter-date-fns';
 import { getCssVar } from '../utils/cssUtils';
 
-// Filler ve TimeScale eklentilerini de kaydediyoruz
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale);
 
 const initialStatus = { 
@@ -53,7 +52,19 @@ function LiveTrackerPane({ taskId, onClose }) {
     ...getChartOptions('Canlı Tahmin Grafiği (Doğrulama Seti)'),
     scales: {
       ...getChartOptions().scales,
-      x: { type: 'time', time: { unit: 'day' }, ticks: { font: { size: 10 }, color: getCssVar('--text-color-darker') } }
+      x: { 
+        type: 'time', 
+        time: { unit: 'day', tooltipFormat: 'yyyy-MM-dd' }, // Tarih formatı ekle
+        ticks: { font: { size: 10 }, color: getCssVar('--text-color-darker') } 
+      }
+    },
+    // YENİ: Yakınlaştırma ve Kaydırma eklentisi
+    plugins: {
+      ...getChartOptions().plugins,
+      zoom: {
+        pan: { enabled: true, mode: 'x', modifierKey: 'alt', },
+        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+      }
     }
   }), []);
 
@@ -61,12 +72,10 @@ function LiveTrackerPane({ taskId, onClose }) {
   useEffect(() => {
     if (!taskId) return;
 
-    // Renkleri CSS değişkenlerinden alalım
     const primaryColor = getCssVar('--primary-color');
     const infoColor = getCssVar('--info-color');
     const errorColor = getCssVar('--error-color');
 
-    // Başlangıç grafiklerini tanımla
     const initialLossChart = {
       labels: [],
       datasets: [{
@@ -77,10 +86,10 @@ function LiveTrackerPane({ taskId, onClose }) {
       }]
     };
     const initialPredictionChart = {
-      labels: [],
+      labels: [], // Zaman ekseni için label'lara gerek yok
       datasets: [
-        { label: 'Gerçek Değerler', data: [], borderColor: infoColor, borderWidth: 2, pointRadius: 0 },
-        { label: 'Tahminler', data: [], borderColor: errorColor, borderDash: [5, 5], borderWidth: 2, pointRadius: 0 }
+        { label: 'Gerçek Değerler', data: [], borderColor: infoColor, borderWidth: 2, pointRadius: 0, fill: false },
+        { label: 'Tahminler', data: [], borderColor: errorColor, borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false }
       ]
     };
     
@@ -98,18 +107,30 @@ function LiveTrackerPane({ taskId, onClose }) {
           // Kayıp grafiğini güncelle
           if (data.details.loss !== undefined) {
             const epochLabel = `E${data.details.epoch}`;
-            const existingLabels = prev.lossChart.labels;
-            const newLabels = existingLabels.includes(epochLabel) ? existingLabels : [...existingLabels, epochLabel];
-            const newLossData = [...prev.lossChart.datasets[0].data];
-            const labelIndex = newLabels.indexOf(epochLabel);
-            newLossData[labelIndex] = data.details.loss;
+            // Eğer aynı epoch için birden fazla güncelleme gelirse sonuncuyu kullan
+            const existingLossData = prev.lossChart.datasets[0].data;
+            const lastEpoch = prev.lossChart.labels[prev.lossChart.labels.length - 1];
 
-            newLossChart = { 
-              ...prev.lossChart, 
-              labels: newLabels.slice(-50), 
-              datasets: [{ ...prev.lossChart.datasets[0], data: newLossData.slice(-50) }] 
-            };
+            // Eğer yeni epoch veya mevcut epochun yeni bir güncellemesi ise ekle/güncelle
+            if (epochLabel !== lastEpoch || newLossChart.labels.length === 0) {
+                 const newLabels = [...prev.lossChart.labels, epochLabel].slice(-50); // Son 50 epoch
+                 const newLossData = [...existingLossData, data.details.loss].slice(-50);
+                 newLossChart = { 
+                     ...prev.lossChart, 
+                     labels: newLabels, 
+                     datasets: [{ ...prev.lossChart.datasets[0], data: newLossData }] 
+                 };
+            } else {
+                // Mevcut epoch için sadece loss'u güncelle
+                const updatedLossData = [...existingLossData];
+                updatedLossData[updatedLossData.length - 1] = data.details.loss;
+                newLossChart = {
+                    ...prev.lossChart,
+                    datasets: [{ ...prev.lossChart.datasets[0], data: updatedLossData }]
+                };
+            }
           }
+
           // Tahmin grafiğini güncelle
           if (data.details.validation_data) {
             const { x_axis, y_true, y_pred } = data.details.validation_data;
@@ -144,7 +165,7 @@ function LiveTrackerPane({ taskId, onClose }) {
         <h4><span role="img" aria-label="satellite">🛰️</span> Canlı Takip: {pipeline_name}</h4>
         <span className={`status-badge status-${state?.toLowerCase()}`}>{state}</span>
       </div>
-      <div style={{display: 'flex', gap: '20px', alignItems: 'stretch'}}>
+      <div style={{display: 'flex', gap: '20px', alignItems: 'stretch', height: '250px'}}> {/* Yüksekliği artırıldı */}
         <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
                 <p style={{ margin: 0, color: 'var(--text-color-darker)', fontSize: '0.9em' }}>{status_text || state}</p>
@@ -155,14 +176,16 @@ function LiveTrackerPane({ taskId, onClose }) {
             <progress value={progressPercent} max="100" style={{width: '100%', height: '10px'}}></progress>
             <div style={{flex: 1, position: 'relative', marginTop: '10px'}}>
               <Line data={liveData.lossChart} options={lossChartOptions} />
+              <p className="chart-instructions" style={{bottom: '0'}}>Epoch ilerlemesi</p>
             </div>
         </div>
-        <div style={{flex: 2, height: '200px', position: 'relative'}}>
+        <div style={{flex: 2, position: 'relative'}}>
           {liveData.predictionChart.datasets[0]?.data.length > 0 ? (
             <Line data={liveData.predictionChart} options={predictionChartOptions} />
           ) : (
             <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-color-darker)'}}>Tahmin verisi bekleniyor...</div>
           )}
+          <p className="chart-instructions" style={{bottom: '0'}}>Yakınlaştırmak için fare tekerleği, kaydırmak için Alt+Sürükle</p>
         </div>
       </div>
       {state === 'FAILURE' && result?.error && <p style={{marginTop: '15px', color: 'var(--error-color)'}}>{result.error.message}</p>}
