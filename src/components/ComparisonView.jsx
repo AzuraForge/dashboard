@@ -9,11 +9,16 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 function ComparisonView({ experiments, onClose }) {
+  // === TEŞHİS İÇİN YENİ LOG ===
+  console.log("ComparisonView: Gelen deneyler:", experiments);
+  // === TEŞHİS SONU ===
+
   const chartData = {
-    labels: Array.from({ length: Math.max(...experiments.map(e => e.results?.loss?.length || 0)) }, (_, i) => `E${i + 1}`),
+    // === DEĞİŞİKLİK BURADA: history.loss yerine doğrudan results.history.loss kullanıyoruz ===
+    labels: Array.from({ length: Math.max(...experiments.map(e => e.results?.history?.loss?.length || 0)) }, (_, i) => `E${i + 1}`),
     datasets: experiments.map((exp, i) => ({
       label: `${exp.config.data_sourcing.ticker} (${exp.experiment_id.slice(-6)})`,
-      data: exp.results?.loss || [],
+      data: exp.results?.history?.loss || [], // results.history.loss'u kullanıyoruz
       borderColor: chartColors[i % chartColors.length],
       backgroundColor: `${chartColors[i % chartColors.length]}33`,
       tension: 0.1, fill: false, borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
@@ -61,10 +66,12 @@ function ComparisonView({ experiments, onClose }) {
                 {experiments.map((exp, i) => (
                   <tr key={exp.experiment_id}>
                     <td><span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>{exp.experiment_id.slice(0, 18)}...</td>
-                    <td>{exp.config.data_sourcing.ticker}</td>
-                    <td>{exp.config.training_params.epochs}</td>
-                    <td>{exp.config.training_params.lr}</td>
-                    <td>{exp.results.final_loss?.toFixed(6) ?? 'N/A'}</td>
+                    {/* === DEĞİŞİKLİK BURADA: config'den doğru yola gidiyoruz === */}
+                    <td>{exp.config?.data_sourcing?.ticker ?? 'N/A'}</td>
+                    <td>{exp.config?.training_params?.epochs ?? 'N/A'}</td>
+                    <td>{exp.config?.training_params?.lr ?? 'N/A'}</td>
+                    {/* === DEĞİŞİKLİK SONU === */}
+                    <td>{exp.results?.final_loss?.toFixed(6) ?? 'N/A'}</td>
                   </tr>
                 ))}
               </tbody>
