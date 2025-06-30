@@ -261,3 +261,19 @@ table tbody tr.selected-row { background-color: color-mix(in srgb, var(--primary
   width: 100%; text-decoration: none;
 }
 .actions-menu button:hover, .actions-menu-button:hover { background-color: var(--secondary-color); color: var(--text-inverse); }
+
+/* ==========================================================================
+   9. FORM HATA STİLLERİ (Yeni)
+   ========================================================================== */
+.form-group input.input-error,
+.form-group select.input-error,
+.form-group textarea.input-error {
+  border-color: var(--error-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--error-color) 30%, transparent);
+}
+.form-error-message {
+  color: var(--error-color);
+  font-size: 0.85em;
+  margin-top: 5px;
+  display: block;
+}
