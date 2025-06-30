@@ -1,9 +1,7 @@
-// dashboard/src/components/ExperimentRow.jsx
-
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { toast } from 'react-toastify';
-import { Link } from 'react-router-dom'; // YENİ
+import { Link } from 'react-router-dom';
 
 const Icon = ({ path, className }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d={path} /></svg>;
 Icon.propTypes = { path: PropTypes.string.isRequired, className: PropTypes.string };
@@ -15,28 +13,34 @@ const ICONS = {
   report: "M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
 };
 
-function ExperimentRow({ experiment, isSelected, onSelect, onReRun, setTrackingTaskId }) {
+function ExperimentRow({ experiment, isSelected, onSelect, setTrackingTaskId }) {
   const [actionsOpen, setActionsOpen] = useState(false);
-  const { experiment_id, status, config, results, completed_at, failed_at, task_id } = experiment;
+  const { 
+    experiment_id, status, task_id, pipeline_name,
+    created_at, completed_at, failed_at,
+    config_summary, results_summary
+  } = experiment;
 
-  const handleCopyConfig = () => {
-    navigator.clipboard.writeText(JSON.stringify(config, null, 2));
-    toast.success('Konfigürasyon panoya kopyalandı!');
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(experiment_id);
+    toast.success('Deney ID panoya kopyalandı!');
     setActionsOpen(false);
   };
 
   const isRunning = ['STARTED', 'PROGRESS', 'PENDING'].includes(status);
-  const finalLoss = results?.final_loss;
+  const finalLoss = results_summary?.final_loss;
   const displayLoss = (finalLoss !== null && finalLoss !== undefined) ? finalLoss.toFixed(6) : 'N/A';
+  const startTime = created_at ? new Date(created_at).toLocaleString() : 'N/A';
+  const endTime = completed_at || failed_at ? new Date(completed_at || failed_at).toLocaleString() : 'N/A';
 
   return (
     <tr className={isSelected ? 'selected-row' : ''}>
       <td><input type="checkbox" checked={isSelected} onChange={onSelect} title="Karşılaştırmak için seç"/></td>
       <td><span className={`status-badge status-${status?.toLowerCase() || 'unknown'}`}>{status || 'Bilinmiyor'}</span></td>
-      <td><div className="detail-cell"><strong>{config?.pipeline_name || 'N/A'}</strong><span className="exp-id">{experiment_id}</span></div></td>
-      <td><div className="detail-cell"><span>Ticker: <strong>{config?.data_sourcing?.ticker || 'N/A'}</strong></span><span>Epochs: <strong>{config?.training_params?.epochs || 'N/A'}</strong></span></div></td>
+      <td><div className="detail-cell"><strong>{pipeline_name || 'N/A'}</strong><span className="exp-id">{experiment_id}</span></div></td>
+      <td><div className="detail-cell"><span>Ticker: <strong>{config_summary?.ticker || 'N/A'}</strong></span><span>Epochs: <strong>{config_summary?.epochs || 'N/A'}</strong></span></div></td>
       <td><div className="detail-cell"><span>Final Kayıp: <strong>{displayLoss}</strong></span></div></td>
-      <td><div className="detail-cell"><span>Başlangıç: {new Date(config.start_time).toLocaleString()}</span><span>Bitiş: {completed_at || failed_at ? new Date(completed_at || failed_at).toLocaleString() : 'N/A'}</span></div></td>
+      <td><div className="detail-cell"><span>Başlangıç: {startTime}</span><span>Bitiş: {endTime}</span></div></td>
       <td className="actions-cell">
         <button className="actions-button" onClick={() => setActionsOpen(!actionsOpen)}>⋮</button>
         {actionsOpen && (
@@ -47,23 +51,19 @@ function ExperimentRow({ experiment, isSelected, onSelect, onReRun, setTrackingT
               </Link>
             )}
             {isRunning && <button onClick={() => { setTrackingTaskId(task_id); setActionsOpen(false); }}><Icon path={ICONS.satellite} /> Canlı İzle</button>}
-            <button onClick={() => { onReRun(config); setActionsOpen(false); }}><Icon path={ICONS.rerun} /> Yeniden Çalıştır</button>
-            <button onClick={handleCopyConfig}><Icon path={ICONS.copy} /> Config'i Kopyala</button>
+            <button onClick={handleCopyId}><Icon path={ICONS.copy} /> ID'yi Kopyala</button>
           </div>
         )}
       </td>
     </tr>
   );
 }
-// DÜZELTME: actions-menu içindeki Link'in bir buton gibi görünmesi için CSS eklemesi gerekiyor.
-// App.css'e şunu ekleyelim:
-/*
-.actions-menu-button {
-  background: none; border: none; color: var(--text-color); padding: 10px 15px; text-align: left;
-  cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 10px; font-size: 0.9em;
-  width: 100%; text-decoration: none;
-}
-.actions-menu-button:hover { background-color: var(--secondary-color); color: var(--text-inverse); }
-*/
-ExperimentRow.propTypes = { experiment: PropTypes.object.isRequired, isSelected: PropTypes.bool.isRequired, onSelect: PropTypes.func.isRequired, onReRun: PropTypes.func.isRequired, setTrackingTaskId: PropTypes.func.isRequired, };
+
+ExperimentRow.propTypes = {
+  experiment: PropTypes.object.isRequired,
+  isSelected: PropTypes.bool.isRequired,
+  onSelect: PropTypes.func.isRequired,
+  setTrackingTaskId: PropTypes.func.isRequired,
+};
+
 export default ExperimentRow;

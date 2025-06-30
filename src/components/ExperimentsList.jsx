@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import ExperimentRow from './ExperimentRow';
 
-function ExperimentsList({ experiments, selectedIds, onSelect, onReRun, setTrackingTaskId }) {
+function ExperimentsList({ experiments, selectedIds, onSelect, setTrackingTaskId }) {
   if (!experiments || experiments.length === 0) {
     return <p style={{textAlign: 'center', padding: '20px'}}>Filtrelerinize uyan bir deney bulunamadı.</p>;
   }
@@ -26,7 +26,6 @@ function ExperimentsList({ experiments, selectedIds, onSelect, onReRun, setTrack
               experiment={exp} 
               isSelected={selectedIds.has(exp.experiment_id)}
               onSelect={() => onSelect(exp.experiment_id)}
-              onReRun={() => onReRun(exp.config)}
               setTrackingTaskId={setTrackingTaskId}
             />
           ))}
@@ -35,5 +34,10 @@ function ExperimentsList({ experiments, selectedIds, onSelect, onReRun, setTrack
     </div>
   );
 }
-ExperimentsList.propTypes = { experiments: PropTypes.array.isRequired, selectedIds: PropTypes.object.isRequired, onSelect: PropTypes.func.isRequired, onReRun: PropTypes.func.isRequired, setTrackingTaskId: PropTypes.func.isRequired, };
+ExperimentsList.propTypes = { 
+  experiments: PropTypes.array.isRequired, 
+  selectedIds: PropTypes.object.isRequired, 
+  onSelect: PropTypes.func.isRequired, 
+  setTrackingTaskId: PropTypes.func.isRequired 
+};
 export default ExperimentsList;

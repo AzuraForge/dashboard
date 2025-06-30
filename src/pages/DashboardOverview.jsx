@@ -1,20 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
-import { toast } from 'react-toastify';
 import PropTypes from 'prop-types';
 import ExperimentsList from '../components/ExperimentsList';
 import ComparisonView from '../components/ComparisonView';
-import { fetchExperiments, startNewExperiment } from '../services/api';
+import { fetchExperiments, fetchExperimentDetails } from '../services/api';
 
-function DashboardOverview({ onNewExperimentClick, setTrackingTaskId }) {
+function DashboardOverview({ setTrackingTaskId }) {
   const [experiments, setExperiments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Filtreleme ve Arama State'leri
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
   
-  // Karşılaştırma State'leri
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
   const [comparisonData, setComparisonData] = useState(null);
 
@@ -22,43 +19,39 @@ function DashboardOverview({ onNewExperimentClick, setTrackingTaskId }) {
     if (showLoadingIndicator) setLoading(true);
     try {
       const response = await fetchExperiments();
-      // Gelen veriyi başlangıç zamanına göre sırala (en yeni en üstte)
-      const sortedData = response.data.sort((a, b) => new Date(b.config.start_time) - new Date(a.config.start_time));
-      setExperiments(sortedData);
+      setExperiments(response.data);
       setError(null);
     } catch (err) {
       setError('API sunucusuna bağlanılamadı veya veri çekilemedi. Servislerin çalıştığından emin olun.');
+      console.error(err);
     } finally {
       if (showLoadingIndicator) setLoading(false);
     }
   };
 
   useEffect(() => {
-    getExperiments(true); // Sayfa ilk yüklendiğinde loading göstergesiyle veri çek
-    const intervalId = setInterval(() => getExperiments(false), 5000); // Arka planda sessizce güncelle
-    return () => clearInterval(intervalId); // Component unmount olduğunda interval'ı temizle
+    getExperiments(true);
+    const intervalId = setInterval(() => getExperiments(false), 5000);
+    return () => clearInterval(intervalId);
   }, []);
 
-  // Mevcut deneylerden dinamik olarak durum listesi oluşturur
   const allStatuses = useMemo(() => {
     const statuses = new Set(experiments.map(exp => exp.status));
     return ['ALL', ...Array.from(statuses).sort()];
   }, [experiments]);
 
-  // Filtrelenmiş deneyleri hesaplar
   const filteredExperiments = useMemo(() => {
     return experiments.filter(exp => {
-      // Durum filtresi
       const statusMatch = filterStatus === 'ALL' || exp.status === filterStatus;
       if (!statusMatch) return false;
 
-      // Arama terimi filtresi (ID, pipeline adı veya ticker sembolü)
       if (searchTerm) {
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
         const searchFields = [
           exp.experiment_id,
-          exp.config?.pipeline_name,
-          exp.config?.data_sourcing?.ticker
+          exp.pipeline_name,
+          exp.config_summary?.ticker,
+          exp.batch_name,
         ];
         return searchFields.some(field => field?.toLowerCase().includes(lowerCaseSearchTerm));
       }
@@ -67,7 +60,6 @@ function DashboardOverview({ onNewExperimentClick, setTrackingTaskId }) {
     });
   }, [experiments, filterStatus, searchTerm]);
   
-  // Karşılaştırma için deney seçme/kaldırma fonksiyonu
   const handleComparisonSelect = (experimentId) => {
     setSelectedForComparison(prev => {
       const newSelection = new Set(prev);
@@ -80,35 +72,27 @@ function DashboardOverview({ onNewExperimentClick, setTrackingTaskId }) {
     });
   };
 
-  // Bir deneyi konfigürasyonuyla yeniden çalıştırma fonksiyonu
-  const handleReRun = async (experimentConfig) => {
-    // Yeniden çalıştırmadan önce eski ID ve zaman bilgilerini temizle
-    const { experiment_id, task_id, start_time, ...configToReRun } = experimentConfig;
-    toast.info(`"${configToReRun.pipeline_name}" deneyi yeniden başlatılıyor...`);
+  const handleStartComparison = async () => {
+    const idsToCompare = Array.from(selectedForComparison);
+    if (idsToCompare.length < 2) return;
+    
+    setComparisonData([]); // Show loading state in modal
     try {
-      const response = await startNewExperiment(configToReRun);
-      toast.success(`Deney başarıyla gönderildi! ID: ${response.data.task_id}`);
-      setTrackingTaskId(response.data.task_id); // Yeniden çalıştırılan deneyi canlı izlemeye başla
-    } catch (err) {
-      toast.error('Deney yeniden başlatılamadı.');
-    }
-  };
-
-  // Karşılaştırma modalını açar
-  const handleStartComparison = () => {
-    const dataToCompare = experiments.filter(exp => selectedForComparison.has(exp.experiment_id));
-    if (dataToCompare.length > 1) {
+      const promises = idsToCompare.map(id => fetchExperimentDetails(id));
+      const responses = await Promise.all(promises);
+      const dataToCompare = responses.map(res => res.data);
       setComparisonData(dataToCompare);
+    } catch (error) {
+      console.error("Karşılaştırma verileri çekilemedi:", error);
+      setComparisonData(null); // Hide modal on error
     }
   };
 
-  // Yükleme ve Hata durumları için gösterilecek arayüz
   if (loading) return <p style={{textAlign: 'center', padding: '40px'}}>Deney verileri yükleniyor...</p>;
   if (error) return <p style={{textAlign: 'center', padding: '40px', color: 'var(--error-color)'}}>{error}</p>;
 
   return (
     <div className="dashboard-overview">
-      {/* Karşılaştırma modalı, sadece data varsa render edilir */}
       {comparisonData && <ComparisonView experiments={comparisonData} onClose={() => setComparisonData(null)}/>}
       
       <div className="page-header">
@@ -116,7 +100,6 @@ function DashboardOverview({ onNewExperimentClick, setTrackingTaskId }) {
         <p>Tüm deneylerinizi tek bir yerden yönetin, takip edin ve karşılaştırın.</p>
       </div>
       
-      {/* Filtreleme ve Aksiyonlar Paneli */}
       <div className="card" style={{ marginBottom: '25px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -142,19 +125,18 @@ function DashboardOverview({ onNewExperimentClick, setTrackingTaskId }) {
         </div>
       </div>
       
-      {/* Deney Tablosu */}
       <ExperimentsList 
         experiments={filteredExperiments} 
         selectedIds={selectedForComparison} 
         onSelect={handleComparisonSelect} 
-        onReRun={handleReRun} 
-        setTrackingTaskId={setTrackingTaskId} 
+        setTrackingTaskId={setTrackingTaskId}
       />
     </div>
   );
 }
+
 DashboardOverview.propTypes = { 
-  onNewExperimentClick: PropTypes.func.isRequired, 
   setTrackingTaskId: PropTypes.func.isRequired, 
 };
+
 export default DashboardOverview;
