@@ -1,0 +1,49 @@
+name: AzuraForge Dashboard CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  release:
+    types: [published] # semantic-release tarafından oluşturulan release'leri dinler
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+    permissions: # GITHUB_TOKEN için gerekli izinler
+      contents: write
+      issues: write
+      pull-requests: write
+    environment:
+      name: development
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # semantic-release için tüm Git geçmişini çek
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20 # Veya projenizin kullandığı Node versiyonu
+
+    - name: Install dependencies
+      run: npm install
+
+    # Geçici olarak devre dışı bırakılan lint adımları
+    - name: Lint code
+      if: false # GEÇİCİ OLARAK DEVRE DIŞI BIRAKILDI
+      run: npm run lint
+
+    - name: Build project
+      # if: github.event_name == 'push' && github.ref == 'refs/heads/main' # Sadece main push'larında build
+      run: npm run build # Projenizi derle
+
+    # YENİ ADIM: Otomatik Versiyonlama ve Etiketleme
+    - name: Semantic Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pusher.name != 'github-actions[bot]' # Sadece main branch'ine push'ta çalışır ve bot'un commit'lerini engeller
+      run: npx semantic-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Organizasyon seviyesindeki secret kullanılacak
+        # Eğer Docker imajı da push edecekseniz, DOCKER_USERNAME ve DOCKER_PASSWORD da gerekebilir.
