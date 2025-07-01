@@ -28,18 +28,25 @@ jobs:
       with:
         node-version: 22
 
-    - name: Install dependencies
-      run: npm install
+    - name: Clean npm cache and node_modules
+      run: |
+        npm cache clean --force
+        rm -rf node_modules
+        rm -f package-lock.json
+
+    - name: Install dependencies (clean install for CI)
+      run: npm ci
 
     - name: Lint code
-      if: false
+      if: false 
       run: npm run lint
 
     - name: Build project
-      # if: github.event_name == 'push' && github.ref == 'refs/heads/main' # Sadece main push'larında build
+      # if: github.event_name == 'push' && github.ref == 'refs/heads/main' 
       run: npm run build
+      
     - name: Semantic Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pusher.name != 'github-actions[bot]'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pusher.name != 'github-actions[bot]' 
       run: npx semantic-release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
