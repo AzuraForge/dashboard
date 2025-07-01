@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react'; // useCallback eklendi
 import ExperimentCard from '../components/ExperimentCard'; 
 import ComparisonView from '../components/ComparisonView';
-import { fetchExperiments } from '../services/api'; // fetchExperimentDetails kaldırıldı, tek çağrı yeterli
+import { fetchExperiments } from '../services/api'; 
 import { toast } from 'react-toastify'; 
 
 function DashboardOverview() {
@@ -16,12 +16,12 @@ function DashboardOverview() {
   const [comparisonData, setComparisonData] = useState(null);
 
   // API'den tüm deney verilerini tek çağrıda çekiyoruz
-  const getExperiments = async (showLoadingIndicator = false) => {
+  // useCallback kullanarak bu fonksiyonun gereksiz yere yeniden oluşmasını engelliyoruz
+  const getExperiments = useCallback(async (showLoadingIndicator = false) => {
     if (showLoadingIndicator) setLoading(true);
     try {
-      // Artık API'nin kendisi tüm detayları döndürüyor olmalı
       const response = await fetchExperiments();
-      setExperiments(response.data); // Data zaten detailed olarak geliyor
+      setExperiments(response.data); 
       setError(null);
     } catch (err) {
       setError('API sunucusuna bağlanılamadı veya veri çekilemedi. Servislerin çalıştığından emin olun.');
@@ -29,15 +29,14 @@ function DashboardOverview() {
     } finally {
       if (showLoadingIndicator) setLoading(false);
     }
-  };
+  }, []); // Bağımlılık yok, sadece bir kez oluşturulacak
 
   useEffect(() => {
     getExperiments(true);
-    // Performansı iyileştirmek için, bu intervalı daha uzun tutabiliriz (örn: 10-15 saniye)
-    // Veya sadece active görevler için daha sık, diğerleri için daha az sık güncelleme yapılabilir.
-    const intervalId = setInterval(() => getExperiments(false), 5000); 
+    // BURADAKİ GÜNCELLEME: API çağrısı sıklığını azaltıyoruz. 5sn -> 10sn
+    const intervalId = setInterval(() => getExperiments(false), 10000); 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [getExperiments]); // getExperiments bağımlılığını ekle
 
   const allStatuses = useMemo(() => {
     const statuses = new Set(experiments.map(exp => exp.status));
@@ -54,12 +53,9 @@ function DashboardOverview() {
         const searchFields = [
           exp.experiment_id,
           exp.pipeline_name,
-          exp.config_summary?.ticker, // config_summary kullanılabilir
+          exp.config_summary?.ticker, 
           exp.batch_name,
-          // exp.config?.data_sourcing?.ticker, // Zaten config_summary'de var, gereksiz tekrar
         ];
-        // Ek olarak, full_config'ten diğer alanlarda da arama yapılabilir (örn. model_params içinde bir değer)
-        // Ancak bu, searchFields array'ini daha karmaşık hale getirir.
         return searchFields.some(field => typeof field === 'string' && field.toLowerCase().includes(lowerCaseSearchTerm));
       }
 
@@ -67,7 +63,7 @@ function DashboardOverview() {
     });
   }, [experiments, filterStatus, searchTerm]);
   
-  const handleComparisonSelect = (experimentId) => {
+  const handleComparisonSelect = useCallback((experimentId) => { // useCallback eklendi
     setSelectedForComparison(prev => {
       const newSelection = new Set(prev);
       if (newSelection.has(experimentId)) {
@@ -77,16 +73,15 @@ function DashboardOverview() {
       }
       return newSelection;
     });
-  };
+  }, []); // Bağımlılık yok
 
-  const handleStartComparison = async () => {
+  const handleStartComparison = useCallback(async () => { // useCallback eklendi
     const idsToCompare = Array.from(selectedForComparison);
     if (idsToCompare.length < 2) {
         toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.');
         return;
     }
     
-    // API'den zaten tüm detaylar geldiği için burada tekrar fetch yapmaya gerek yok.
     const dataToCompare = idsToCompare.map(id => 
         experiments.find(exp => exp.experiment_id === id)
     ).filter(Boolean); 
@@ -102,7 +97,7 @@ function DashboardOverview() {
     }
 
     setComparisonData(validDataForComparison);
-  };
+  }, [selectedForComparison, experiments]); // Bağımlılıkları ekle
 
   if (loading) return <p style={{textAlign: 'center', padding: '40px'}}>Deney verileri yükleniyor...</p>;
   if (error) return <p style={{textAlign: 'center', padding: '40px', color: 'var(--error-color)'}}>{error}</p>;
@@ -141,7 +136,6 @@ function DashboardOverview() {
         </div>
       </div>
       
-      {/* Kartları dikey olarak sıralamak için flex column kullanıyoruz */}
       <div className="experiments-list-container"> 
         {filteredExperiments.length === 0 ? (
           <p style={{textAlign: 'center', padding: '20px'}}>Filtrelerinize uyan bir deney bulunamadı.</p>
@@ -151,7 +145,7 @@ function DashboardOverview() {
               key={exp.experiment_id} 
               experiment={exp} 
               isSelected={selectedForComparison.has(exp.experiment_id)}
-              onSelect={() => handleComparisonSelect(exp.experiment_id)}
+              onSelect={handleComparisonSelect} // useCallback ile gelen fonksiyonu direk geçir
             />
           ))
         )}
