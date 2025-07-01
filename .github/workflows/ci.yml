@@ -6,12 +6,12 @@ on:
   pull_request:
     branches: [ "main" ]
   release:
-    types: [published]
+    types: [published] 
 
 jobs:
   build-and-lint:
     runs-on: ubuntu-latest
-    permissions:
+    permissions: 
       contents: write
       issues: write
       pull-requests: write
@@ -21,7 +21,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0 
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -30,19 +30,18 @@ jobs:
 
     - name: Clean npm cache and node_modules
       run: |
-        npm cache clean --force
+        npm cache clean --force || true
         rm -rf node_modules
         rm -f package-lock.json
 
-    - name: Install dependencies (clean install for CI)
-      run: npm ci
+    - name: Install dependencies   
+      run: npm install --legacy-peer-deps 
 
     - name: Lint code
       if: false 
       run: npm run lint
 
     - name: Build project
-      # if: github.event_name == 'push' && github.ref == 'refs/heads/main' 
       run: npm run build
       
     - name: Semantic Release
