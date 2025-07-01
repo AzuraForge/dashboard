@@ -32,6 +32,17 @@ const getChartOptions = (title, chartColors, isTimeScale = false, enableZoom = f
             label: (ctx) => `${ctx.dataset.label}: ${typeof ctx.parsed.y === 'number' ? ctx.parsed.y.toFixed(4) : ctx.parsed.y}`,
         }
       },
+      // BURADAKİ DÜZELTME: Zoom plugin'in sıfırlama işlevi
+      zoom: {
+        pan: { enabled: enableZoom, mode: 'x', modifierKey: 'alt', }, // Sadece tahmin grafiği ve report modda pan
+        zoom: { wheel: { enabled: enableZoom }, pinch: { enabled: enableZoom }, mode: 'x' }, // Sadece tahmin grafiği ve report modda zoom
+        onZoomComplete: ({chart}) => { // Zoom sıfırlama için double click
+          if (chart.options.plugins.zoom.enabled) {
+            if (chart.resetZoom) chart.resetZoom();
+          }
+        },
+        // doubleClick: false, // Double click zoomu kapat
+      }
     },
     scales: { 
       y: { 
@@ -56,13 +67,6 @@ const getChartOptions = (title, chartColors, isTimeScale = false, enableZoom = f
       type: 'time', 
       time: { unit: 'day', tooltipFormat: 'yyyy-MM-dd' },
       ticks: { font: { size: compactMode ? 8 : 10, color: chartColors.textColorDarker } } 
-    };
-  }
-
-  if (enableZoom) {
-    options.plugins.zoom = {
-      pan: { enabled: true, mode: 'x', modifierKey: 'alt', },
-      zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
     };
   }
 
@@ -94,16 +98,12 @@ function SingleExperimentChart({
     textInverse: getCssVar('--text-inverse'),
   }), []);
 
-  // Canlı Takip (WebSocket) Mantığı
   useEffect(() => {
     let socket;
+    // Sadece live mod ve taskId varsa WebSocket bağlantısı kur
     if (mode === 'live' && taskId) {
         socket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
         
-        // Hız sorununu gidermek için bir throttle mekanizması düşünebiliriz.
-        // Ancak bu, grafiklerin anlık akışını bozabilir. Şimdilik bu kısmı optimize etmiyoruz.
-        // Eğer yavaşlık devam ederse, buraya bir throttle ekleyebiliriz.
-
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.state === 'PROGRESS' && data.details) {
@@ -123,7 +123,7 @@ function SingleExperimentChart({
                             updatedLoss.push(newLoss);
                         }
                     }
-                    // BURADAKİ GÜNCELLEME: validation_data varsa prediction'ı güncelle
+                    // KRİTİK: validation_data varsa prediction'ı güncelle
                     if (data.details.validation_data) {
                         updatedPrediction = data.details.validation_data;
                     }
@@ -152,6 +152,7 @@ function SingleExperimentChart({
     };
   }, [mode, taskId]); 
 
+  // Hangi veriyi kullanacağımızı belirle (liveData veya reportData)
   const currentLossHistory = mode === 'live' ? liveData.loss : reportData?.history?.loss || [];
   const currentPredictionXAxis = mode === 'live' ? liveData.prediction.x_axis : reportData?.time_index || [];
   const currentPredictionYTrue = mode === 'live' ? liveData.prediction.y_true : reportData?.y_true || [];
