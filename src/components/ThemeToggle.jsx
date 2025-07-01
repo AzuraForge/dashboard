@@ -14,5 +14,4 @@ function ThemeToggle() {
   );
 }
 
-// DÜZELTME: Eksik olan 'export default' satırı eklendi.
 export default ThemeToggle;

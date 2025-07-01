@@ -1,0 +1,235 @@
+// dashboard/src/components/SingleExperimentChart.jsx
+
+import React, { useState, useEffect, useMemo, useRef } from 'react'; 
+import PropTypes from 'prop-types';
+import { Line } from 'react-chartjs-2';
+import { 
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, 
+  Title, Tooltip, Legend, Filler, TimeScale 
+} from 'chart.js';
+import 'chartjs-adapter-date-fns';
+import zoomPlugin from 'chartjs-plugin-zoom'; 
+import { getCssVar } from '../utils/cssUtils';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale, zoomPlugin);
+
+const getChartOptions = (title, chartColors, isTimeScale = false, enableZoom = false, compactMode = false) => {
+  const options = {
+    responsive: true, 
+    maintainAspectRatio: false,
+    animation: { duration: 300, easing: 'linear' },
+    plugins: { 
+      legend: { display: compactMode ? false : true, position: 'top', labels: { font: { size: compactMode ? 8 : 10, color: chartColors.textColor } } },
+      title: { display: compactMode ? false : true, text: title, font: { size: compactMode ? 10 : 14, color: chartColors.textColor } },
+      tooltip: {
+        enabled: true, backgroundColor: chartColors.contentBg,
+        titleColor: chartColors.textColor, bodyColor: chartColors.textColor,
+        borderColor: chartColors.border, borderWidth: 1, padding: 5, 
+        displayColors: true,
+        bodyFont: { size: compactMode ? 9 : 12 }, 
+        titleFont: { size: compactMode ? 9 : 12 },
+        callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${typeof ctx.parsed.y === 'number' ? ctx.parsed.y.toFixed(4) : ctx.parsed.y}`,
+        }
+      },
+    },
+    scales: { 
+      y: { 
+        grid: { color: chartColors.border, borderDash: [2, 4], drawTicks: false },
+        ticks: { display: compactMode ? false : true, padding: 5, maxTicksLimit: compactMode ? 2 : 5, font: { size: compactMode ? 8 : 10, color: chartColors.textColorDarker } },
+        beginAtZero: true, 
+      }, 
+      x: {
+        grid: { display: false },
+        ticks: { display: compactMode ? false : true, padding: 5, maxRotation: 0, autoSkip: true, maxTicksLimit: compactMode ? 3 : 7, font: { size: compactMode ? 8 : 10, color: chartColors.textColorDarker } },
+      } 
+    },
+    layout: {
+      padding: {
+        left: compactMode ? 5 : 10, right: compactMode ? 5 : 10, top: compactMode ? 0 : 5, bottom: compactMode ? 0 : 5
+      }
+    }
+  };
+
+  if (isTimeScale) {
+    options.scales.x = { 
+      type: 'time', 
+      time: { unit: 'day', tooltipFormat: 'yyyy-MM-dd' },
+      ticks: { font: { size: compactMode ? 8 : 10, color: chartColors.textColorDarker } } 
+    };
+  }
+
+  if (enableZoom) {
+    options.plugins.zoom = {
+      pan: { enabled: true, mode: 'x', modifierKey: 'alt', },
+      zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+    };
+  }
+
+  return options;
+};
+
+
+function SingleExperimentChart({ 
+  taskId, 
+  mode, 
+  chartType, 
+  reportData, 
+}) {
+  const [liveData, setLiveData] = useState({
+    loss: [],
+    prediction: { x_axis: [], y_true: [], y_pred: [] }
+  });
+
+  const chartRef = useRef(null); 
+
+  const chartColors = useMemo(() => ({
+    primary: getCssVar('--primary-color'),
+    info: getCssVar('--info-color'), 
+    error: getCssVar('--error-color'), 
+    border: getCssVar('--border-color'),
+    textColor: getCssVar('--text-color'),
+    textColorDarker: getCssVar('--text-color-darker'),
+    contentBg: getCssVar('--content-bg'),
+    textInverse: getCssVar('--text-inverse'),
+  }), []);
+
+  // Canlı Takip (WebSocket) Mantığı
+  useEffect(() => {
+    let socket;
+    if (mode === 'live' && taskId) {
+        socket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
+        
+        // Hız sorununu gidermek için bir throttle mekanizması düşünebiliriz.
+        // Ancak bu, grafiklerin anlık akışını bozabilir. Şimdilik bu kısmı optimize etmiyoruz.
+        // Eğer yavaşlık devam ederse, buraya bir throttle ekleyebiliriz.
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.state === 'PROGRESS' && data.details) {
+                setLiveData(prev => {
+                    let updatedLoss = [...prev.loss];
+                    let updatedPrediction = { ...prev.prediction };
+
+                    if (data.details.loss !== undefined) {
+                        const newLoss = data.details.loss;
+                        const newEpoch = data.details.epoch;
+                        const lastEpochIndex = updatedLoss.length - 1;
+                        if (newEpoch > updatedLoss.length) { 
+                            updatedLoss.push(newLoss);
+                        } else if (lastEpochIndex >= 0) { 
+                            updatedLoss[lastEpochIndex] = newLoss;
+                        } else { 
+                            updatedLoss.push(newLoss);
+                        }
+                    }
+                    // BURADAKİ GÜNCELLEME: validation_data varsa prediction'ı güncelle
+                    if (data.details.validation_data) {
+                        updatedPrediction = data.details.validation_data;
+                    }
+                    return { loss: updatedLoss, prediction: updatedPrediction };
+                });
+            } else if (data.state === 'SUCCESS' && data.result?.results) {
+                setLiveData({
+                    loss: data.result.results.history?.loss || [],
+                    prediction: {
+                        x_axis: data.result.results.time_index || [],
+                        y_true: data.result.results.y_true || [],
+                        y_pred: data.result.results.y_pred || [],
+                    }
+                });
+            }
+        };
+        
+        socket.onerror = (err) => { console.error(`WebSocket Error for task ${taskId}:`, err); };
+        socket.onclose = () => {}; 
+    }
+    
+    return () => { 
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close(1000, "Component unmounting or task finished"); 
+      }
+    };
+  }, [mode, taskId]); 
+
+  const currentLossHistory = mode === 'live' ? liveData.loss : reportData?.history?.loss || [];
+  const currentPredictionXAxis = mode === 'live' ? liveData.prediction.x_axis : reportData?.time_index || [];
+  const currentPredictionYTrue = mode === 'live' ? liveData.prediction.y_true : reportData?.y_true || [];
+  const currentPredictionYPred = mode === 'live' ? liveData.prediction.y_pred : reportData?.y_pred || [];
+
+
+  const chartData = useMemo(() => {
+    if (chartType === 'loss') {
+      return {
+        labels: currentLossHistory.map((_, i) => `E${i + 1}`),
+        datasets: [{
+          label: 'Eğitim Kaybı',
+          data: currentLossHistory,
+          borderColor: chartColors.primary,
+          backgroundColor: `color-mix(in srgb, ${chartColors.primary} 20%, transparent)`,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: 'origin',
+        }]
+      };
+    } else if (chartType === 'prediction') {
+      return {
+        labels: currentPredictionXAxis,
+        datasets: [
+          {
+            label: 'Gerçek', 
+            data: currentPredictionYTrue,
+            borderColor: chartColors.info,
+            backgroundColor: `color-mix(in srgb, ${chartColors.info} 20%, transparent)`,
+            pointRadius: 0,
+            fill: 'origin'
+          },
+          {
+            label: 'Tahmin', 
+            data: currentPredictionYPred,
+            borderColor: chartColors.error,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false
+          }
+        ].map(dataset => ({
+            ...dataset,
+            data: dataset.data.map((val, i) => ({ x: currentPredictionXAxis[i], y: val }))
+        }))
+      };
+    }
+    return { labels: [], datasets: [] };
+  }, [chartType, currentLossHistory, currentPredictionXAxis, currentPredictionYTrue, currentPredictionYPred, chartColors]);
+
+  const chartTitle = chartType === 'loss' ? 'Kayıp' : 'Tahmin'; 
+
+  const hasData = chartType === 'loss' ? currentLossHistory.length > 0 : currentPredictionYTrue.length > 0;
+
+  return (
+    <div className="single-chart-container">
+      {hasData ? (
+        <Line 
+          ref={chartRef} 
+          data={chartData} 
+          options={getChartOptions(
+            chartTitle, 
+            chartColors, 
+            chartType === 'prediction', 
+            chartType === 'prediction' && mode === 'report', 
+            true 
+          )} 
+        />
+      ) : (
+        <div className="no-chart-data-message">
+          {mode === 'live' ? 'Canlı veri bekleniyor...' : 'Veri mevcut değil.'}
+        </div>
+      )}
+       {(chartType === 'prediction' && mode === 'report') && ( 
+            <p className="chart-instructions">Yakınlaştırmak için fare tekerleği, kaydırmak için Alt + Sürükle.</p>
+        )}
+    </div>
+  );
+}
+
+export default React.memo(SingleExperimentChart);

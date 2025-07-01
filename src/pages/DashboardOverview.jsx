@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import PropTypes from 'prop-types';
-import ExperimentsList from '../components/ExperimentsList';
+import ExperimentCard from '../components/ExperimentCard'; 
 import ComparisonView from '../components/ComparisonView';
-import { fetchExperiments, fetchExperimentDetails } from '../services/api';
+import { fetchExperiments } from '../services/api'; // fetchExperimentDetails kaldırıldı, tek çağrı yeterli
+import { toast } from 'react-toastify'; 
 
-function DashboardOverview({ setTrackingTaskId }) {
+function DashboardOverview() {
   const [experiments, setExperiments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,11 +15,13 @@ function DashboardOverview({ setTrackingTaskId }) {
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
   const [comparisonData, setComparisonData] = useState(null);
 
+  // API'den tüm deney verilerini tek çağrıda çekiyoruz
   const getExperiments = async (showLoadingIndicator = false) => {
     if (showLoadingIndicator) setLoading(true);
     try {
+      // Artık API'nin kendisi tüm detayları döndürüyor olmalı
       const response = await fetchExperiments();
-      setExperiments(response.data);
+      setExperiments(response.data); // Data zaten detailed olarak geliyor
       setError(null);
     } catch (err) {
       setError('API sunucusuna bağlanılamadı veya veri çekilemedi. Servislerin çalıştığından emin olun.');
@@ -31,7 +33,9 @@ function DashboardOverview({ setTrackingTaskId }) {
 
   useEffect(() => {
     getExperiments(true);
-    const intervalId = setInterval(() => getExperiments(false), 5000);
+    // Performansı iyileştirmek için, bu intervalı daha uzun tutabiliriz (örn: 10-15 saniye)
+    // Veya sadece active görevler için daha sık, diğerleri için daha az sık güncelleme yapılabilir.
+    const intervalId = setInterval(() => getExperiments(false), 5000); 
     return () => clearInterval(intervalId);
   }, []);
 
@@ -50,10 +54,13 @@ function DashboardOverview({ setTrackingTaskId }) {
         const searchFields = [
           exp.experiment_id,
           exp.pipeline_name,
-          exp.config_summary?.ticker,
+          exp.config_summary?.ticker, // config_summary kullanılabilir
           exp.batch_name,
+          // exp.config?.data_sourcing?.ticker, // Zaten config_summary'de var, gereksiz tekrar
         ];
-        return searchFields.some(field => field?.toLowerCase().includes(lowerCaseSearchTerm));
+        // Ek olarak, full_config'ten diğer alanlarda da arama yapılabilir (örn. model_params içinde bir değer)
+        // Ancak bu, searchFields array'ini daha karmaşık hale getirir.
+        return searchFields.some(field => typeof field === 'string' && field.toLowerCase().includes(lowerCaseSearchTerm));
       }
 
       return true;
@@ -74,18 +81,27 @@ function DashboardOverview({ setTrackingTaskId }) {
 
   const handleStartComparison = async () => {
     const idsToCompare = Array.from(selectedForComparison);
-    if (idsToCompare.length < 2) return;
-    
-    setComparisonData([]); // Show loading state in modal
-    try {
-      const promises = idsToCompare.map(id => fetchExperimentDetails(id));
-      const responses = await Promise.all(promises);
-      const dataToCompare = responses.map(res => res.data);
-      setComparisonData(dataToCompare);
-    } catch (error) {
-      console.error("Karşılaştırma verileri çekilemedi:", error);
-      setComparisonData(null); // Hide modal on error
+    if (idsToCompare.length < 2) {
+        toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.');
+        return;
     }
+    
+    // API'den zaten tüm detaylar geldiği için burada tekrar fetch yapmaya gerek yok.
+    const dataToCompare = idsToCompare.map(id => 
+        experiments.find(exp => exp.experiment_id === id)
+    ).filter(Boolean); 
+
+    const validDataForComparison = dataToCompare.filter(exp => 
+        exp.status === 'SUCCESS' && exp.results?.history?.loss && exp.results.history.loss.length > 0
+    );
+
+    if (validDataForComparison.length < 2) {
+        toast.warn('Karşılaştırma için en az 2 adet, başarılı ve kayıp geçmişi olan deney seçmelisiniz.');
+        setComparisonData(null); 
+        return;
+    }
+
+    setComparisonData(validDataForComparison);
   };
 
   if (loading) return <p style={{textAlign: 'center', padding: '40px'}}>Deney verileri yükleniyor...</p>;
@@ -125,18 +141,23 @@ function DashboardOverview({ setTrackingTaskId }) {
         </div>
       </div>
       
-      <ExperimentsList 
-        experiments={filteredExperiments} 
-        selectedIds={selectedForComparison} 
-        onSelect={handleComparisonSelect} 
-        setTrackingTaskId={setTrackingTaskId}
-      />
+      {/* Kartları dikey olarak sıralamak için flex column kullanıyoruz */}
+      <div className="experiments-list-container"> 
+        {filteredExperiments.length === 0 ? (
+          <p style={{textAlign: 'center', padding: '20px'}}>Filtrelerinize uyan bir deney bulunamadı.</p>
+        ) : (
+          filteredExperiments.map((exp) => (
+            <ExperimentCard 
+              key={exp.experiment_id} 
+              experiment={exp} 
+              isSelected={selectedForComparison.has(exp.experiment_id)}
+              onSelect={() => handleComparisonSelect(exp.experiment_id)}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
-
-DashboardOverview.propTypes = { 
-  setTrackingTaskId: PropTypes.func.isRequired, 
-};
 
 export default DashboardOverview;

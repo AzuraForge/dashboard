@@ -9,13 +9,13 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// fetchExperiments artık tüm detayları getiriyor
 export const fetchExperiments = () => apiClient.get('/experiments');
 export const startNewExperiment = (config) => apiClient.post('/experiments', config);
 export const fetchAvailablePipelines = () => apiClient.get('/pipelines'); 
 export const fetchPipelineDefaultConfig = (pipelineId) => apiClient.get(`/pipelines/${pipelineId}/config`);
 
-// YENİ FONKSİYON (fetchExperimentReport yerine)
-// Artık JSON döndüğü için responseType belirtmeye gerek yok.
+// fetchExperimentDetails artık UI'da doğrudan kullanılmayacak, ancak API'de kalabilir.
 export const fetchExperimentDetails = (experimentId) => {
   return apiClient.get(`/experiments/${experimentId}/details`);
 };

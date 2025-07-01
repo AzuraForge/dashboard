@@ -1,61 +1,59 @@
 // dashboard/src/App.jsx
 
 import { useState, useContext } from 'react';
-import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import './App.css'; 
+import './App.css';
 import { ThemeContext } from './context/ThemeContext';
-import NewExperiment from './pages/NewExperiment';
+
+// Yeni Navigasyon ve Panel Bileşenleri
+import TopNavbar from './components/TopNavbar';
+import NewExperimentPanel from './components/NewExperimentPanel';
+
+// Dashboard Overview hala ana içeriğimiz
 import DashboardOverview from './pages/DashboardOverview';
-import ReportViewer from './pages/ReportViewer'; // YENİ
-import LiveTrackerPane from './components/LiveTrackerPane';
-import Logo from './components/Logo';
-import ThemeToggle from './components/ThemeToggle';
 
 function App() {
-  const [trackingTaskId, setTrackingTaskId] = useState(null);
-  const navigate = useNavigate();
-  const location = useLocation();
   const { theme } = useContext(ThemeContext);
+  const navigate = useNavigate();
+  const [isNewExperimentPanelOpen, setIsNewExperimentPanelOpen] = useState(false);
 
-  const handleExperimentStarted = (taskId) => {
-    if (taskId) setTrackingTaskId(taskId);
-  };
-  
-  const handleCloseTracker = () => {
-    setTrackingTaskId(null);
+  // Deney başlatıldığında panelin kapanması ve ana sayfaya yönlendirme
+  const handleExperimentStarted = () => {
+    setIsNewExperimentPanelOpen(false); // Paneli kapat
+    navigate('/'); // Ana sayfaya yönlendir
   };
 
-  const isActive = (path) => location.pathname.startsWith(path) && path !== '/' || location.pathname === path;
+  const handleOpenNewExperimentPanel = () => {
+    setIsNewExperimentPanelOpen(true);
+  };
+
+  const handleCloseNewExperimentPanel = () => {
+    setIsNewExperimentPanelOpen(false);
+  };
 
   return (
     <div className="app-layout">
       <ToastContainer position="bottom-right" autoClose={5000} theme={theme} />
-      <aside className="sidebar">
-        <Logo />
-        <nav style={{ flexGrow: 1 }}>
-          <ul>
-            <li><Link to="/" className={location.pathname === '/' ? 'active' : ''}>
-                <span role="img" aria-label="dashboard">📊</span><span>Genel Bakış</span>
-            </Link></li>
-            <li><Link to="/new-experiment" className={isActive('/new-experiment') ? 'active' : ''}>
-                <span role="img" aria-label="rocket">🚀</span><span>Yeni Deney</span>
-            </Link></li>
-          </ul>
-        </nav>
-        <ThemeToggle />
-      </aside>
+      
+      {/* Sol menü kaldırıldı, yerine üst navigasyon çubuğu */}
+      <TopNavbar onNewExperimentClick={handleOpenNewExperimentPanel} />
+
       <main className="main-content">
-        {trackingTaskId && <LiveTrackerPane taskId={trackingTaskId} onClose={handleCloseTracker} />}
         <Routes>
-          <Route path="/" element={<DashboardOverview setTrackingTaskId={setTrackingTaskId} />} />
-          <Route path="/new-experiment" element={<NewExperiment onExperimentStarted={handleExperimentStarted} />} />
-          {/* YENİ ROUTE */}
-          <Route path="/reports/:experimentId" element={<ReportViewer />} />
+          <Route path="/" element={<DashboardOverview />} />
+          {/* NewExperiment sayfası artık bir rota olarak değil, yan panel olarak açılacak */}
         </Routes>
       </main>
+
+      {/* Yeni Deney Yan Paneli */}
+      <NewExperimentPanel 
+        isOpen={isNewExperimentPanelOpen} 
+        onClose={handleCloseNewExperimentPanel} 
+        onExperimentStarted={handleExperimentStarted} 
+      />
     </div>
   );
 }
