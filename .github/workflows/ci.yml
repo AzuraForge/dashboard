@@ -6,12 +6,12 @@ on:
   pull_request:
     branches: [ "main" ]
   release:
-    types: [published] # semantic-release tarafından oluşturulan release'leri dinler
+    types: [published]
 
 jobs:
   build-and-lint:
     runs-on: ubuntu-latest
-    permissions: # GITHUB_TOKEN için gerekli izinler
+    permissions:
       contents: write
       issues: write
       pull-requests: write
@@ -21,29 +21,25 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # semantic-release için tüm Git geçmişini çek
+        fetch-depth: 0
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20 # Veya projenizin kullandığı Node versiyonu
+        node-version: 22
 
     - name: Install dependencies
       run: npm install
 
-    # Geçici olarak devre dışı bırakılan lint adımları
     - name: Lint code
-      if: false # GEÇİCİ OLARAK DEVRE DIŞI BIRAKILDI
+      if: false
       run: npm run lint
 
     - name: Build project
       # if: github.event_name == 'push' && github.ref == 'refs/heads/main' # Sadece main push'larında build
-      run: npm run build # Projenizi derle
-
-    # YENİ ADIM: Otomatik Versiyonlama ve Etiketleme
+      run: npm run build
     - name: Semantic Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pusher.name != 'github-actions[bot]' # Sadece main branch'ine push'ta çalışır ve bot'un commit'lerini engeller
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.pusher.name != 'github-actions[bot]'
       run: npx semantic-release
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Organizasyon seviyesindeki secret kullanılacak
-        # Eğer Docker imajı da push edecekseniz, DOCKER_USERNAME ve DOCKER_PASSWORD da gerekebilir.
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
