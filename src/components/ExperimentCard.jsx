@@ -64,13 +64,16 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
 
   const totalEpochs = Array.isArray(config_summary?.epochs) ? config_summary.epochs[0] : config_summary?.epochs;
 
+  // KRİTİK: Canlı veri için yeni state'ler (grafiklere doğrudan beslenecek)
   const [liveLossHistory, setLiveLossHistory] = useState([]);
   const [livePredictionData, setLivePredictionData] = useState({ x_axis: [], y_true: [], y_pred: [] });
   const [liveStatusText, setLiveStatusText] = useState('Başlatıldı');
   const [liveEpoch, setLiveEpoch] = useState(0);
 
+  // WebSocket'ten gelen canlı veriyi yakalamak için useEffect
   useEffect(() => {
     if (!isRunning || !task_id) {
+        // Görev bitince veya çalışmıyorsa, canlı veriyi temizle
         setLiveLossHistory([]);
         setLivePredictionData({ x_axis: [], y_true: [], y_pred: [] });
         setLiveStatusText('Başlatıldı');
@@ -107,7 +110,7 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
         }
       } else if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
         setLiveStatusText(data.state === 'SUCCESS' ? 'Tamamlandı' : `Hata: ${data.result?.error?.message || data.details?.status_text}`);
-        setLiveEpoch(totalEpochs); 
+        setLiveEpoch(totalEpochs); // Son epoch'a getir
         // Görev bittikten sonra, UI'ın güncel Experiment objesini alması için,
         // DashboardOverview'daki polling mekanizmasına güveniyoruz.
         // Bu component'in kendi live state'ini temizlemiyoruz ki son anlık veriler kalsın.

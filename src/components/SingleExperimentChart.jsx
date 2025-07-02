@@ -108,7 +108,6 @@ function SingleExperimentChart({
                     let updatedLoss = [...prev.loss];
                     let updatedPrediction = { ...prev.prediction };
 
-                    // Kayıp verisini güncelleme
                     if (data.details.loss !== undefined) {
                         const newLoss = data.details.loss;
                         const newEpoch = data.details.epoch;
@@ -121,7 +120,6 @@ function SingleExperimentChart({
                         }
                     }
 
-                    // Tahmin verisini güncelleme (sadece validation_data varsa ve geçerliyse)
                     if (data.details.validation_data && Array.isArray(data.details.validation_data.x_axis) && data.details.validation_data.x_axis.length > 0) {
                         updatedPrediction = {
                             x_axis: data.details.validation_data.x_axis, 
@@ -130,7 +128,7 @@ function SingleExperimentChart({
                         };
                     }
                     
-                    console.log("LIVE DATA UPDATE:", { updatedLoss, updatedPrediction }); // <-- Bu satırın aktif olduğundan emin olun
+                   
                     return { loss: updatedLoss, prediction: updatedPrediction };
                 });
             } else if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
@@ -155,7 +153,6 @@ function SingleExperimentChart({
     }
 }, [mode, taskId]); 
 
-  // Hangi veriyi kullanacağımızı belirle (liveData veya reportData)
   const currentLossHistory = mode === 'live' ? liveData.loss : reportData?.history?.loss || [];
   const currentPredictionXAxis = mode === 'live' ? liveData.prediction.x_axis : reportData?.time_index || [];
   const currentPredictionYTrue = mode === 'live' ? liveData.prediction.y_true : reportData?.y_true || [];
