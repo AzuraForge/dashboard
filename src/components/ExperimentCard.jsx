@@ -5,27 +5,31 @@ import PropTypes from 'prop-types';
 import { toast } from 'react-toastify';
 import SingleExperimentChart from './SingleExperimentChart'; 
 import { getCssVar } from '../utils/cssUtils'; 
-import { fetchExperimentDetails } from '../services/api'; // Yeni import
+import { fetchExperimentDetails } from '../services/api'; 
 
 const Icon = ({ path, className }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d={path} /></svg>;
 Icon.propTypes = { path: PropTypes.string.isRequired, className: PropTypes.string };
 
 const ICONS = {
-  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2-2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
+  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
   expand: "M19 19H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" 
 };
 
 function ExperimentCard({ experiment, isSelected, onSelect }) {
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false); // Detayların katlanabilir durumu
-  // KRİTİK DÜZELTME: Tam detaylar için yeni state'ler ekliyoruz.
-  const [fullDetails, setFullDetails] = useState(null); 
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false); 
+  // KRİTİK: fullDetails state'i sadece detay bölümü için kullanılacak.
+  // Ana kart bilgileri ve rapor grafikleri 'experiment' prop'undan gelecek.
+  const [fetchedFullDetails, setFetchedFullDetails] = useState(null); 
   const [detailsLoading, setDetailsLoading] = useState(false);
 
+  // KRİTİK: experiment prop'undan tam config/results/error objelerini doğrudan alıyoruz.
+  // API'den list_experiments() artık bunları döndürüyor.
   const { 
     experiment_id, status, task_id, pipeline_name,
     created_at, completed_at, failed_at,
-    config_summary, results_summary, 
+    config, results, error, // <-- BURADAKİ DEĞİŞİKLİK
+    config_summary, results_summary, // Özet bilgiler de hala var
   } = experiment;
 
   const handleCopyId = () => {
@@ -35,11 +39,11 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
   };
 
   const handleToggleDetails = async () => {
-    if (!isDetailsExpanded && !fullDetails) { // Detaylar açılacak ve henüz yüklenmemişse
+    if (!isDetailsExpanded && !fetchedFullDetails) { // Detaylar açılacak ve henüz yüklenmemişse
       setDetailsLoading(true);
       try {
         const response = await fetchExperimentDetails(experiment_id);
-        setFullDetails(response.data);
+        setFetchedFullDetails(response.data); // <-- fetchedFullDetails olarak güncellendi
       } catch (error) {
         console.error("Detaylı deney bilgisi çekilemedi:", error);
         toast.error("Detaylı deney bilgisi yüklenemedi.");
@@ -54,22 +58,23 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
   const isRunning = ['STARTED', 'PROGRESS'].includes(status);
   const isFinished = ['SUCCESS', 'FAILURE'].includes(status);
 
-  const finalLoss = results_summary?.final_loss;
-  const displayLoss = (finalLoss !== null && finalLoss !== undefined) ? finalLoss.toFixed(6) : 'N/A';
+  const displayLoss = (results_summary?.final_loss !== null && results_summary?.final_loss !== undefined) ? results_summary.final_loss.toFixed(6) : 'N/A';
   const startTime = created_at ? new Date(created_at).toLocaleString() : 'N/A';
   const endTime = completed_at || failed_at ? new Date(completed_at || failed_at).toLocaleString() : 'N/A';
 
-  // config_summary'den epochs'u al, eğer liste ise ilk elemanı al (API'ye tekli gönderdiğimiz için)
   const totalEpochs = Array.isArray(config_summary?.epochs) ? config_summary.epochs[0] : config_summary?.epochs;
 
-  // Canlı takip için ilerleme yüzdesi ve metin
-  const [liveProgress, setLiveProgress] = useState({ epoch: 0, totalEpochs: totalEpochs, text: 'Başlatıldı' });
+  const [liveLossHistory, setLiveLossHistory] = useState([]);
+  const [livePredictionData, setLivePredictionData] = useState({ x_axis: [], y_true: [], y_pred: [] });
+  const [liveStatusText, setLiveStatusText] = useState('Başlatıldı');
+  const [liveEpoch, setLiveEpoch] = useState(0);
 
-  // WebSocket'ten gelen canlı veriyi yakalamak için useEffect
   useEffect(() => {
-    // Sadece çalışır durumdaki görevler için WebSocket başlat
     if (!isRunning || !task_id) {
-        setLiveProgress({ epoch: 0, totalEpochs: totalEpochs, text: 'Başlatıldı' });
+        setLiveLossHistory([]);
+        setLivePredictionData({ x_axis: [], y_true: [], y_pred: [] });
+        setLiveStatusText('Başlatıldı');
+        setLiveEpoch(0);
         return;
     }
 
@@ -78,36 +83,45 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.state === 'PROGRESS' && data.details) {
-        setLiveProgress({
-          epoch: data.details.epoch,
-          totalEpochs: data.details.total_epochs,
-          text: data.details.status_text,
-        });
-        // KRİTİK DÜZELTME: LivePredictionCallback'ten gelen güncel tahmin verisi için
-        // fullDetails'i de güncellememiz gerekiyor, aksi takdirde rapor modunda güncel görünmez.
-        // Ancak bu, fullDetails'ı her epoch'ta güncellemek anlamına gelir ki bu verimsiz olabilir.
-        // Daha iyi bir yaklaşım: LivePredictionCallback sadece canlı veriyi yayınlasın,
-        // sonuçlandığında tam datayı API'ye göndersin, Frontend API'den çeksin.
-        // Şu anki mimaride, liveData state'i zaten grafikleri güncelliyor, fullDetails sadece statik rapor için.
+        setLiveStatusText(data.details.status_text);
+        setLiveEpoch(data.details.epoch);
+
+        if (data.details.loss !== undefined) {
+          setLiveLossHistory(prev => {
+            const newLoss = data.details.loss;
+            const newEpoch = data.details.epoch;
+            const updated = [...prev];
+            if (newEpoch > updated.length) { 
+                updated.push(newLoss);
+            } else if (newEpoch - 1 >= 0 && newEpoch - 1 < updated.length) { 
+                updated[newEpoch - 1] = newLoss;
+            } else { 
+                updated.push(newLoss);
+            }
+            return updated;
+          });
+        }
+
+        if (data.details.validation_data && Array.isArray(data.details.validation_data.x_axis) && data.details.validation_data.x_axis.length > 0) {
+          setLivePredictionData(data.details.validation_data);
+        }
       } else if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
-        setLiveProgress(prev => ({
-          ...prev,
-          epoch: prev.totalEpochs, 
-          text: data.state === 'SUCCESS' ? 'Tamamlandı' : `Hata: ${data.result?.error?.message || data.details?.status_text}`,
-        }));
-        // Görev bittiğinde fullDetails'ı yeniden yüklemek iyi bir fikir olabilir,
-        // ancak DashboardOverview API'yi zaten 20 saniyede bir poll ediyor.
+        setLiveStatusText(data.state === 'SUCCESS' ? 'Tamamlandı' : `Hata: ${data.result?.error?.message || data.details?.status_text}`);
+        setLiveEpoch(totalEpochs); 
+        // Görev bittikten sonra, UI'ın güncel Experiment objesini alması için,
+        // DashboardOverview'daki polling mekanizmasına güveniyoruz.
+        // Bu component'in kendi live state'ini temizlemiyoruz ki son anlık veriler kalsın.
       }
     };
 
     socket.onerror = (err) => {
       console.error(`WebSocket Error for task ${task_id}:`, err);
-      setLiveProgress(prev => ({ ...prev, text: 'WebSocket Hatası!' }));
+      setLiveStatusText('WebSocket Hatası!');
     };
 
     socket.onclose = () => {
         if (!isFinished) { 
-            setLiveProgress(prev => ({ ...prev, text: 'Bağlantı kesildi.' }));
+            setLiveStatusText('Bağlantı kesildi.');
         }
     };
 
@@ -118,7 +132,7 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
     };
   }, [isRunning, task_id, totalEpochs, isFinished]);
 
-  const progressPercent = liveProgress.totalEpochs > 0 ? (liveProgress.epoch / liveProgress.totalEpochs) * 100 : 0;
+  const progressPercent = totalEpochs > 0 ? (liveEpoch / totalEpochs) * 100 : 0;
 
   return (
     <div className={`experiment-card card ${isSelected ? 'selected-card' : ''} ${isDetailsExpanded ? 'expanded' : ''}`}>
@@ -139,8 +153,8 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
           <button className="actions-button" onClick={() => setActionsOpen(!actionsOpen)}>⋮</button>
           {actionsOpen && (
             <div className="actions-menu" onMouseLeave={() => setActionsOpen(false)}>
-              <button onClick={handleToggleDetails}> {/* handleToggleDetails kullan */}
-                <Icon path={ICONS.expand} /> {isDetailsExpanded ? 'Detayları Gizle' : 'Detayları Göster'}
+              <button onClick={handleToggleDetails}>
+                <Icon path={ICONS.expand} /> {isDetailsExpanded ? 'Detayları Gizle' : (detailsLoading ? 'Yükleniyor...' : 'Detayları Göster')}
               </button>
               <button onClick={handleCopyId}><Icon path={ICONS.copy} /> ID'yi Kopyala</button>
             </div>
@@ -170,11 +184,11 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
             <div className="live-progress-bar-section">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
                     <p style={{ margin: 0, color: getCssVar('--text-color-darker'), fontSize: '0.8em' }}>
-                        Canlı Takip: {liveProgress.text}
+                        Canlı Takip: {liveStatusText}
                     </p>
-                    {liveProgress.totalEpochs > 0 && (
+                    {totalEpochs > 0 && (
                         <span style={{ fontWeight: 'bold', fontFamily: 'var(--font-mono)', fontSize: '0.8em' }}>
-                            {liveProgress.epoch} / {liveProgress.totalEpochs}
+                            {liveEpoch} / {totalEpochs}
                         </span>
                     )}
                 </div>
@@ -189,14 +203,14 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
             taskId={task_id} 
             mode={isRunning ? 'live' : 'report'} 
             chartType="loss" 
-            reportData={fullDetails?.results || experiment.results} // fullDetails varsa onu kullan
+            reportData={isRunning ? {history: {loss: liveLossHistory}} : results} // <-- BURADAKİ DEĞİŞİKLİK
           />
           {/* Tahmin Grafiği */}
           <SingleExperimentChart 
             taskId={task_id} 
             mode={isRunning ? 'live' : 'report'} 
             chartType="prediction" 
-            reportData={fullDetails?.results || experiment.results} // fullDetails varsa onu kullan
+            reportData={isRunning ? {time_index: livePredictionData.x_axis, y_true: livePredictionData.y_true, y_pred: livePredictionData.y_pred} : results} // <-- BURADAKİ DEĞİŞİKLİK
           />
         </div>
       </div>
@@ -204,21 +218,23 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
       {/* Detaylar Bölümü (Katlanabilir) */}
       <div className="card-expanded-details">
         {detailsLoading && <p style={{textAlign: 'center'}}>Detaylar yükleniyor...</p>}
-        {fullDetails && (
+        {isDetailsExpanded && (fetchedFullDetails || (isFinished && results && config && error)) ? ( // <-- fetchedFullDetails kontrolü eklendi
             <>
-                {fullDetails.status === 'FAILURE' && fullDetails.error && (
+                {(fetchedFullDetails?.status === 'FAILURE' || status === 'FAILURE') && (fetchedFullDetails?.error || error) && (
                     <div style={{marginBottom: '15px'}}>
                         <h4 style={{marginTop: 0, color: getCssVar('--error-color')}}>Hata Detayı</h4>
                         <pre style={{backgroundColor: getCssVar('--bg-color'), padding: '10px', borderRadius: '8px', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto', fontSize: '0.8em', color: getCssVar('--error-color')}}>
-                            <code>{JSON.stringify(fullDetails.error, null, 2)}</code>
+                            <code>{JSON.stringify(fetchedFullDetails?.error || error, null, 2)}</code>
                         </pre>
                     </div>
                 )}
                 <h4 style={{marginTop: 0}}>Detaylı Konfigürasyon</h4>
                 <pre style={{backgroundColor: getCssVar('--bg-color'), padding: '10px', borderRadius: '8px', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto', fontSize: '0.8em'}}>
-                  <code>{JSON.stringify(fullDetails.config, null, 2)}</code>
+                  <code>{JSON.stringify(fetchedFullDetails?.config || config, null, 2)}</code>
                 </pre>
             </>
+        ) : isDetailsExpanded && isRunning && (
+            <p style={{textAlign: 'center'}}>Deney devam ediyor, detaylar tamamlandığında yüklenecektir.</p>
         )}
       </div>
     </div>
