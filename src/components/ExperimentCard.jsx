@@ -1,33 +1,53 @@
 // dashboard/src/components/ExperimentCard.jsx
 
-// DÜZELTME: React ve tüm hook'lar doğru şekilde import edildi.
 import React, { useState, useEffect, useRef } from 'react'; 
 import PropTypes from 'prop-types';
 import { toast } from 'react-toastify';
 import SingleExperimentChart from './SingleExperimentChart'; 
 import { getCssVar } from '../utils/cssUtils'; 
+import { fetchExperimentDetails } from '../services/api'; // Yeni import
 
 const Icon = ({ path, className }) => <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d={path} /></svg>;
 Icon.propTypes = { path: PropTypes.string.isRequired, className: PropTypes.string };
 
 const ICONS = {
-  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
+  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2-2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
   expand: "M19 19H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" 
 };
 
 function ExperimentCard({ experiment, isSelected, onSelect }) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false); // Detayların katlanabilir durumu
+  // KRİTİK DÜZELTME: Tam detaylar için yeni state'ler ekliyoruz.
+  const [fullDetails, setFullDetails] = useState(null); 
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   const { 
     experiment_id, status, task_id, pipeline_name,
     created_at, completed_at, failed_at,
-    config_summary, results_summary, config: full_config, results: full_results, error: full_error // Tam config ve results
+    config_summary, results_summary, 
   } = experiment;
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(experiment_id);
     toast.success('Deney ID panoya kopyalandı!');
+    setActionsOpen(false);
+  };
+
+  const handleToggleDetails = async () => {
+    if (!isDetailsExpanded && !fullDetails) { // Detaylar açılacak ve henüz yüklenmemişse
+      setDetailsLoading(true);
+      try {
+        const response = await fetchExperimentDetails(experiment_id);
+        setFullDetails(response.data);
+      } catch (error) {
+        console.error("Detaylı deney bilgisi çekilemedi:", error);
+        toast.error("Detaylı deney bilgisi yüklenemedi.");
+      } finally {
+        setDetailsLoading(false);
+      }
+    }
+    setIsDetailsExpanded(!isDetailsExpanded);
     setActionsOpen(false);
   };
 
@@ -40,17 +60,15 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
   const endTime = completed_at || failed_at ? new Date(completed_at || failed_at).toLocaleString() : 'N/A';
 
   // config_summary'den epochs'u al, eğer liste ise ilk elemanı al (API'ye tekli gönderdiğimiz için)
-  const totalEpochs = Array.isArray(full_config?.training_params?.epochs) ? full_config.training_params.epochs[0] : full_config?.training_params?.epochs;
+  const totalEpochs = Array.isArray(config_summary?.epochs) ? config_summary.epochs[0] : config_summary?.epochs;
 
   // Canlı takip için ilerleme yüzdesi ve metin
-  // Bu state artık sadece bu bileşen içinde canlı WebSocket verisini tutacak
   const [liveProgress, setLiveProgress] = useState({ epoch: 0, totalEpochs: totalEpochs, text: 'Başlatıldı' });
 
   // WebSocket'ten gelen canlı veriyi yakalamak için useEffect
   useEffect(() => {
     // Sadece çalışır durumdaki görevler için WebSocket başlat
     if (!isRunning || !task_id) {
-        // Eğer görev artık çalışmıyorsa veya task_id yoksa, state'i sıfırla veya varsayılan yap
         setLiveProgress({ epoch: 0, totalEpochs: totalEpochs, text: 'Başlatıldı' });
         return;
     }
@@ -65,13 +83,20 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
           totalEpochs: data.details.total_epochs,
           text: data.details.status_text,
         });
+        // KRİTİK DÜZELTME: LivePredictionCallback'ten gelen güncel tahmin verisi için
+        // fullDetails'i de güncellememiz gerekiyor, aksi takdirde rapor modunda güncel görünmez.
+        // Ancak bu, fullDetails'ı her epoch'ta güncellemek anlamına gelir ki bu verimsiz olabilir.
+        // Daha iyi bir yaklaşım: LivePredictionCallback sadece canlı veriyi yayınlasın,
+        // sonuçlandığında tam datayı API'ye göndersin, Frontend API'den çeksin.
+        // Şu anki mimaride, liveData state'i zaten grafikleri güncelliyor, fullDetails sadece statik rapor için.
       } else if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
-        // Görev bittiğinde, progress bar'ı ve text'i final duruma getir
         setLiveProgress(prev => ({
           ...prev,
-          epoch: prev.totalEpochs, // Son epoch'a getir
+          epoch: prev.totalEpochs, 
           text: data.state === 'SUCCESS' ? 'Tamamlandı' : `Hata: ${data.result?.error?.message || data.details?.status_text}`,
         }));
+        // Görev bittiğinde fullDetails'ı yeniden yüklemek iyi bir fikir olabilir,
+        // ancak DashboardOverview API'yi zaten 20 saniyede bir poll ediyor.
       }
     };
 
@@ -81,7 +106,6 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
     };
 
     socket.onclose = () => {
-        // Zaten başarılı veya başarısız olduysa, state'i değiştirmeyelim
         if (!isFinished) { 
             setLiveProgress(prev => ({ ...prev, text: 'Bağlantı kesildi.' }));
         }
@@ -107,7 +131,7 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
         <div className="card-main-info">
             <h3 className="pipeline-name">{pipeline_name || 'N/A'}</h3>
             <span className="experiment-id">ID: {experiment_id.slice(0, 10)}...</span>
-            {full_config?.batch_name && <span className="batch-name">Grup: {full_config.batch_name}</span>}
+            {experiment.batch_name && <span className="batch-name">Grup: {experiment.batch_name}</span>}
         </div>
         
         {/* Aksiyon Menüsü */}
@@ -115,7 +139,7 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
           <button className="actions-button" onClick={() => setActionsOpen(!actionsOpen)}>⋮</button>
           {actionsOpen && (
             <div className="actions-menu" onMouseLeave={() => setActionsOpen(false)}>
-              <button onClick={() => { setIsDetailsExpanded(!isDetailsExpanded); setActionsOpen(false); }}>
+              <button onClick={handleToggleDetails}> {/* handleToggleDetails kullan */}
                 <Icon path={ICONS.expand} /> {isDetailsExpanded ? 'Detayları Gizle' : 'Detayları Göster'}
               </button>
               <button onClick={handleCopyId}><Icon path={ICONS.copy} /> ID'yi Kopyala</button>
@@ -127,17 +151,17 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
       {/* Ana Gövde: Özet Metrikler, İlerleme Çubuğu ve Grafikler */}
       <div className="card-body">
         <div className="card-metrics-summary">
-          <p><strong>Sembol:</strong> {full_config?.data_sourcing?.ticker || 'N/A'}</p> 
+          <p><strong>Sembol:</strong> {config_summary?.ticker || 'N/A'}</p> 
           <p><strong>Epochs:</strong> {totalEpochs || 'N/A'}</p>
-          <p><strong>LR:</strong> {full_config?.training_params?.lr || 'N/A'}</p> 
+          <p><strong>LR:</strong> {config_summary?.lr || 'N/A'}</p> 
           <p><strong>Final Kayıp:</strong> {displayLoss}</p>
           <p><strong>Başlangıç:</strong> {startTime}</p>
           <p><strong>Bitiş:</strong> {endTime}</p>
-          {isFinished && full_results?.metrics?.r2_score !== undefined && (
-            <p><strong>R² Skoru:</strong> {full_results.metrics.r2_score.toFixed(4)}</p>
+          {isFinished && results_summary?.r2_score !== undefined && (
+            <p><strong>R² Skoru:</strong> {results_summary.r2_score.toFixed(4)}</p>
           )}
-          {isFinished && full_results?.metrics?.mae !== undefined && (
-            <p><strong>MAE:</strong> {full_results.metrics.mae.toFixed(4)}</p>
+          {isFinished && results_summary?.mae !== undefined && (
+            <p><strong>MAE:</strong> {results_summary.mae.toFixed(4)}</p>
           )}
         </div>
 
@@ -165,32 +189,37 @@ function ExperimentCard({ experiment, isSelected, onSelect }) {
             taskId={task_id} 
             mode={isRunning ? 'live' : 'report'} 
             chartType="loss" 
-            reportData={full_results} 
+            reportData={fullDetails?.results || experiment.results} // fullDetails varsa onu kullan
           />
           {/* Tahmin Grafiği */}
           <SingleExperimentChart 
             taskId={task_id} 
             mode={isRunning ? 'live' : 'report'} 
             chartType="prediction" 
-            reportData={full_results} 
+            reportData={fullDetails?.results || experiment.results} // fullDetails varsa onu kullan
           />
         </div>
       </div>
 
       {/* Detaylar Bölümü (Katlanabilir) */}
       <div className="card-expanded-details">
-        {status === 'FAILURE' && full_error && (
-            <div style={{marginBottom: '15px'}}>
-                <h4 style={{marginTop: 0, color: getCssVar('--error-color')}}>Hata Detayı</h4>
-                <pre style={{backgroundColor: getCssVar('--bg-color'), padding: '10px', borderRadius: '8px', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto', fontSize: '0.8em', color: getCssVar('--error-color')}}>
-                    <code>{JSON.stringify(full_error, null, 2)}</code>
+        {detailsLoading && <p style={{textAlign: 'center'}}>Detaylar yükleniyor...</p>}
+        {fullDetails && (
+            <>
+                {fullDetails.status === 'FAILURE' && fullDetails.error && (
+                    <div style={{marginBottom: '15px'}}>
+                        <h4 style={{marginTop: 0, color: getCssVar('--error-color')}}>Hata Detayı</h4>
+                        <pre style={{backgroundColor: getCssVar('--bg-color'), padding: '10px', borderRadius: '8px', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto', fontSize: '0.8em', color: getCssVar('--error-color')}}>
+                            <code>{JSON.stringify(fullDetails.error, null, 2)}</code>
+                        </pre>
+                    </div>
+                )}
+                <h4 style={{marginTop: 0}}>Detaylı Konfigürasyon</h4>
+                <pre style={{backgroundColor: getCssVar('--bg-color'), padding: '10px', borderRadius: '8px', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto', fontSize: '0.8em'}}>
+                  <code>{JSON.stringify(fullDetails.config, null, 2)}</code>
                 </pre>
-            </div>
+            </>
         )}
-        <h4 style={{marginTop: 0}}>Detaylı Konfigürasyon</h4>
-        <pre style={{backgroundColor: getCssVar('--bg-color'), padding: '10px', borderRadius: '8px', whiteSpace: 'pre-wrap', maxHeight: '200px', overflowY: 'auto', fontSize: '0.8em'}}>
-          <code>{JSON.stringify(full_config, null, 2)}</code>
-        </pre>
       </div>
     </div>
   );
@@ -202,4 +231,4 @@ ExperimentCard.propTypes = {
   onSelect: PropTypes.func.isRequired,
 };
 
-export default React.memo(ExperimentCard); // React.memo ile sarmalayın
+export default React.memo(ExperimentCard);
