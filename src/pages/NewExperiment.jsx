@@ -20,7 +20,7 @@ const parseNumberListInput = (value) => {
   if (value === null || value === undefined || value === '') return []; 
   
   if (Array.isArray(value)) { 
-    return value.map(v => typeof v === 'string' ? parseFloat(v.replace(',', '.')) : v); 
+    return value.map(v => typeof v === 'string' ? parseFloat(v.replace(',', '.')) : v).filter(v => !isNaN(v)); 
   }
   
   if (typeof value === 'number') { 
@@ -33,7 +33,7 @@ const parseNumberListInput = (value) => {
       const decimalReadyString = s.replace(',', '.'); 
       const num = parseFloat(decimalReadyString);
       return isNaN(num) ? NaN : num; 
-    });
+    }).filter(v => !isNaN(v));
   }
   
   return [NaN]; 
@@ -47,23 +47,29 @@ const formatListInput = (value) => {
   return value?.toString() ?? ''; 
 };
 
+// --- Katlanabilir Alan Render Fonksiyonu ---
+const renderFieldset = (sectionName, legendText, content, expandedSections, toggleSection) => (
+  <fieldset className={`form-fieldset collapsible-fieldset ${expandedSections[sectionName] ? 'expanded' : ''}`}>
+    <div className={`collapsible-header ${!expandedSections[sectionName] ? 'collapsed' : ''}`} onClick={() => toggleSection(sectionName)}>
+      <span>{legendText}</span>
+      <ChevronDownIcon className="icon" />
+    </div>
+    <div className="collapsible-content">
+      {content}
+    </div>
+  </fieldset>
+);
 
-// --- Her Pipeline İçin Özel Form Bileşeni ---
+
+// --- Pipeline'a Özel Form Bileşenleri ---
 
 function StockPredictorConfigForm({ config, onConfigChange, errors }) {
   const localConfig = JSON.parse(JSON.stringify(config || {}));
   
   const [expandedSections, setExpandedSections] = useState({
-    data_sourcing: true, 
-    feature_engineering: false, 
-    model_params: false,
-    training_params: false,
-    system: false,
+    data_sourcing: true, feature_engineering: false, model_params: false,
+    training_params: false, system: false,
   });
-
-  useEffect(() => {
-    setExpandedSections(prev => ({ ...prev, data_sourcing: true }));
-  }, [config]);
 
   const toggleSection = (sectionName) => {
     setExpandedSections(prev => ({ ...prev, [sectionName]: !prev[sectionName] }));
@@ -72,217 +78,154 @@ function StockPredictorConfigForm({ config, onConfigChange, errors }) {
   const handleChange = (e, path) => {
     const { value, type } = e.target;
     let newValue = value;
-
     if (type === 'select-one' && (value === 'true' || value === 'false')) {
         newValue = (value === 'true');
     }
 
     let updatedConfig = JSON.parse(JSON.stringify(localConfig));
     let current = updatedConfig;
-    const pathParts = path.split('.'); 
-
+    const pathParts = path.split('.');
     for (let i = 0; i < pathParts.length - 1; i++) {
       current = current[pathParts[i]] = current[pathParts[i]] || {};
     }
-    current[pathParts[pathParts.length - 1]] = newValue; 
+    current[pathParts[pathParts.length - 1]] = newValue;
     onConfigChange(updatedConfig);
   };
 
   if (!config) return <p>Konfigürasyon yüklenemedi.</p>;
-
-  const renderFieldset = (sectionName, legendText, content) => (
-    <fieldset className={`form-fieldset collapsible-fieldset ${expandedSections[sectionName] ? 'expanded' : ''}`}>
-      <div className={`collapsible-header ${!expandedSections[sectionName] ? 'collapsed' : ''}`} onClick={() => toggleSection(sectionName)}>
-        <span>{legendText}</span>
-        <ChevronDownIcon className="icon" />
-      </div>
-      <div className="collapsible-content">
-        {content}
-      </div>
-    </fieldset>
-  );
-
+  
+  const renderSharedFieldset = (sectionName, legendText, content) => renderFieldset(sectionName, legendText, content, expandedSections, toggleSection);
 
   return (
     <>
-      {renderFieldset('data_sourcing', 'Veri Kaynağı', (
+      {renderSharedFieldset('data_sourcing', 'Veri Kaynağı', (
         <div className="form-group">
           <label htmlFor="ticker">Ticker Sembolü:</label>
           <input
-            type="text"
-            id="ticker"
+            type="text" id="ticker"
             value={formatListInput(localConfig.data_sourcing?.ticker)}
             onChange={(e) => handleChange(e, 'data_sourcing.ticker')}
-            className={errors['data_sourcing-ticker'] ? 'input-error' : ''}
+            className={errors['data_sourcing.ticker'] ? 'input-error' : ''}
             placeholder="Örn: MSFT, AAPL, GOOG"
           />
-          <small>Tek bir değer veya virgülle ayrılmış birden fazla değer (örn: MSFT, AAPL, GOOG)</small>
-          {errors['data_sourcing-ticker'] && <span className="form-error-message">{errors['data_sourcing-ticker']}</span>}
+          <small>Tek bir değer veya virgülle ayrılmış birden fazla değer.</small>
+          {errors['data_sourcing.ticker'] && <span className="form-error-message">{errors['data_sourcing.ticker']}</span>}
         </div>
       ))}
-
-      {renderFieldset('feature_engineering', 'Özellik Mühendisliği', (
+      {renderSharedFieldset('feature_engineering', 'Özellik Mühendisliği', (
         <div className="form-group">
           <label htmlFor="target_col_transform">Hedef Sütun Dönüşümü:</label>
-          <select
-            id="target_col_transform"
-            value={localConfig.feature_engineering?.target_col_transform || 'none'}
-            onChange={(e) => handleChange(e, 'feature_engineering.target_col_transform')}
-            className={errors['feature_engineering-target_col_transform'] ? 'input-error' : ''}
-          >
+          <select id="target_col_transform" value={localConfig.feature_engineering?.target_col_transform || 'none'} onChange={(e) => handleChange(e, 'feature_engineering.target_col_transform')}>
             <option value="none">Yok</option>
             <option value="log">Log (log1p)</option>
           </select>
-          <small>Modelin hedef sütunu üzerinde uygulanacak dönüşüm.</small>
-          {errors['feature_engineering-target_col_transform'] && <span className="form-error-message">{errors['feature_engineering-target_col_transform']}</span>}
         </div>
       ))}
-
-      {renderFieldset('model_params', 'Model Parametreleri', (
+      {renderSharedFieldset('model_params', 'Model Parametreleri', (
         <>
-          <div className="form-group">
-            <label htmlFor="sequence_length">Sekans Uzunluğu:</label>
-            <input
-              type="text" 
-              id="sequence_length"
-              value={formatListInput(localConfig.model_params?.sequence_length)}
-              onChange={(e) => handleChange(e, 'model_params.sequence_length')}
-              className={errors['model_params-sequence_length'] ? 'input-error' : ''}
-              placeholder="Örn: 30, 60, 90"
-            />
-            <small>Geçmiş kaç günün verisinin girdi olarak kullanılacağı.</small>
-            {errors['model_params-sequence_length'] && <span className="form-error-message">{errors['model_params-sequence_length']}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="hidden_size">Gizli Katman Boyutu:</label>
-            <input
-              type="text" 
-              id="hidden_size"
-              value={formatListInput(localConfig.model_params?.hidden_size)}
-              onChange={(e) => handleChange(e, 'model_params.hidden_size')}
-              className={errors['model_params-hidden_size'] ? 'input-error' : ''}
-              placeholder="Örn: 50, 100, 150"
-            />
-            <small>LSTM katmanındaki gizli birim sayısı.</small>
-            {errors['model_params-hidden_size'] && <span className="form-error-message">{errors['model_params-hidden_size']}</span>}
-          </div>
+          <div className="form-group"><label htmlFor="sequence_length">Sekans Uzunluğu:</label><input type="text" id="sequence_length" value={formatListInput(localConfig.model_params?.sequence_length)} onChange={(e) => handleChange(e, 'model_params.sequence_length')} /></div>
+          <div className="form-group"><label htmlFor="hidden_size">Gizli Katman Boyutu:</label><input type="text" id="hidden_size" value={formatListInput(localConfig.model_params?.hidden_size)} onChange={(e) => handleChange(e, 'model_params.hidden_size')} /></div>
         </>
       ))}
-
-      {renderFieldset('training_params', 'Eğitim Parametreleri', (
+      {renderSharedFieldset('training_params', 'Eğitim Parametreleri', (
         <>
-          <div className="form-group">
-            <label htmlFor="epochs">Epoch Sayısı:</label>
-            <input
-              type="text" 
-              id="epochs"
-              value={formatListInput(localConfig.training_params?.epochs)}
-              onChange={(e) => handleChange(e, 'training_params.epochs')}
-              className={errors['training_params-epochs'] ? 'input-error' : ''}
-              placeholder="Örn: 50, 100"
-            />
-            <small>Modelin eğitim veri seti üzerinden kaç kez geçeceği.</small>
-            {errors['training_params-epochs'] && <span className="form-error-message">{errors['training_params-epochs']}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="lr">Öğrenme Oranı (LR):</label>
-            <input
-              type="text" 
-              id="lr"
-              value={formatListInput(localConfig.training_params?.lr)}
-              onChange={(e) => handleChange(e, 'training_params.lr')}
-              className={errors['training_params-lr'] ? 'input-error' : ''}
-              placeholder="Örn: 0.001, 0.0001"
-            />
-            <small>Optimizer'ın ağırlıkları ne kadar hızlı güncelleyeceği.</small>
-            {errors['training_params-lr'] && <span className="form-error-message">{errors['training_params-lr']}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="optimizer">Optimizer:</label>
-            <select
-              id="optimizer"
-              value={localConfig.training_params?.optimizer || 'adam'}
-              onChange={(e) => handleChange(e, 'training_params.optimizer')}
-              className={errors['training_params-optimizer'] ? 'input-error' : ''}
-            >
-              <option value="adam">Adam</option>
-              <option value="sgd">SGD</option>
-            </select>
-            <small>Modelin ağırlıklarını güncellemek için kullanılan algoritma.</small>
-            {errors['training_params-optimizer'] && <span className="form-error-message">{errors['training_params-optimizer']}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="test_size">Test Seti Boyutu (0.0 - 1.0):</label>
-            <input
-              type="text" 
-              id="test_size"
-              value={formatListInput(localConfig.training_params?.test_size)}
-              onChange={(e) => handleChange(e, 'training_params.test_size')}
-              className={errors['training_params-test_size'] ? 'input-error' : ''}
-              placeholder="Örn: 0.1, 0.2"
-            />
-            <small>Veri setinin test için ayrılacak oranı.</small>
-            {errors['training_params-test_size'] && <span className="form-error-message">{errors['training_params-test_size']}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="validate_every">Her Kaç Epoch'ta Bir Doğrula:</label>
-            <input
-              type="text" 
-              id="validate_every"
-              value={formatListInput(localConfig.training_params?.validate_every)}
-              onChange={(e) => handleChange(e, 'training_params.validate_every')}
-              className={errors['training_params-validate_every'] ? 'input-error' : ''}
-              placeholder="Örn: 5, 10"
-            />
-            <small>Canlı takip panelindeki tahmin grafiğinin kaç epoch'ta bir güncelleneceği.</small>
-            {errors['training_params-validate_every'] && <span className="form-error-message">{errors['training_params-validate_every']}</span>}
-          </div>
+          <div className="form-group"><label htmlFor="epochs">Epoch Sayısı:</label><input type="text" id="epochs" value={formatListInput(localConfig.training_params?.epochs)} onChange={(e) => handleChange(e, 'training_params.epochs')} /></div>
+          <div className="form-group"><label htmlFor="lr">Öğrenme Oranı (LR):</label><input type="text" id="lr" value={formatListInput(localConfig.training_params?.lr)} onChange={(e) => handleChange(e, 'training_params.lr')} /></div>
+          <div className="form-group"><label htmlFor="optimizer">Optimizer:</label><select id="optimizer" value={localConfig.training_params?.optimizer || 'adam'} onChange={(e) => handleChange(e, 'training_params.optimizer')}><option value="adam">Adam</option><option value="sgd">SGD</option></select></div>
+          <div className="form-group"><label htmlFor="test_size">Test Seti Boyutu:</label><input type="text" id="test_size" value={formatListInput(localConfig.training_params?.test_size)} onChange={(e) => handleChange(e, 'training_params.test_size')} /></div>
+          <div className="form-group"><label htmlFor="validate_every">Doğrulama Sıklığı (Epoch):</label><input type="text" id="validate_every" value={formatListInput(localConfig.training_params?.validate_every)} onChange={(e) => handleChange(e, 'training_params.validate_every')} /></div>
         </>
       ))}
-      
-      {renderFieldset('system', 'Sistem Ayarları', (
+      {renderSharedFieldset('system', 'Sistem Ayarları', (
         <>
-          <div className="form-group">
-            <label htmlFor="caching_enabled">Önbellek Etkin mi?</label>
-            <select
-              id="caching_enabled"
-              value={localConfig.system?.caching_enabled ? 'true' : 'false'}
-              onChange={(e) => handleChange(e, 'system.caching_enabled')} 
-              className={errors['system-caching_enabled'] ? 'input-error' : ''}
-            >
-              <option value="true">Evet</option>
-              <option value="false">Hayır</option>
-            </select>
-            <small>Veri çekme işleminin önbelleğe alınıp alınmayacağı.</small>
-            {errors['system-caching_enabled'] && <span className="form-error-message">{errors['system-caching_enabled']}</span>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="cache_max_age_hours">Önbellek Yaşam Süresi (saat):</label>
-            <input
-              type="text" 
-              id="cache_max_age_hours"
-              value={formatListInput(localConfig.system?.cache_max_age_hours)}
-              onChange={(e) => handleChange(e, 'system.cache_max_age_hours')}
-              className={errors['system-cache_max_age_hours'] ? 'input-error' : ''}
-              placeholder="Örn: 12, 24"
-            />
-            <small>Önbellekteki verinin kaç saat sonra geçersiz sayılacağı.</small>
-            {errors['system-cache_max_age_hours'] && <span className="form-error-message">{errors['system-cache_max_age_hours']}</span>}
-          </div>
+          <div className="form-group"><label htmlFor="caching_enabled">Önbellek Etkin mi?</label><select id="caching_enabled" value={localConfig.system?.caching_enabled ? 'true' : 'false'} onChange={(e) => handleChange(e, 'system.caching_enabled')}><option value="true">Evet</option><option value="false">Hayır</option></select></div>
+          <div className="form-group"><label htmlFor="cache_max_age_hours">Önbellek Yaşam Süresi (saat):</label><input type="text" id="cache_max_age_hours" value={formatListInput(localConfig.system?.cache_max_age_hours)} onChange={(e) => handleChange(e, 'system.cache_max_age_hours')} /></div>
         </>
       ))}
     </>
   );
 }
+StockPredictorConfigForm.propTypes = { config: PropTypes.object, onConfigChange: PropTypes.func.isRequired, errors: PropTypes.object.isRequired };
 
-StockPredictorConfigForm.propTypes = {
-  config: PropTypes.object,
-  onConfigChange: PropTypes.func.isRequired,
-  errors: PropTypes.object.isRequired,
-};
+
+// --- YENİ EKLENEN FORM BİLEŞENİ ---
+function WeatherForecasterConfigForm({ config, onConfigChange, errors }) {
+  const localConfig = JSON.parse(JSON.stringify(config || {}));
+
+  const [expandedSections, setExpandedSections] = useState({
+    data_sourcing: true, feature_engineering: false, model_params: false,
+    training_params: false, system: false,
+  });
+
+  const toggleSection = (sectionName) => {
+    setExpandedSections(prev => ({ ...prev, [sectionName]: !prev[sectionName] }));
+  };
+  
+  const handleChange = (e, path) => {
+    const { value, type } = e.target;
+    let newValue = value;
+    if (type === 'select-one' && (value === 'true' || value === 'false')) {
+        newValue = (value === 'true');
+    }
+    
+    let updatedConfig = JSON.parse(JSON.stringify(localConfig));
+    let current = updatedConfig;
+    const pathParts = path.split('.');
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      current = current[pathParts[i]] = current[pathParts[i]] || {};
+    }
+    current[pathParts[pathParts.length - 1]] = newValue;
+    onConfigChange(updatedConfig);
+  };
+
+  if (!config) return <p>Konfigürasyon yüklenemedi.</p>;
+  
+  const renderSharedFieldset = (sectionName, legendText, content) => renderFieldset(sectionName, legendText, content, expandedSections, toggleSection);
+
+  return (
+    <>
+      {renderSharedFieldset('data_sourcing', 'Veri Kaynağı (Open-Meteo)', (
+        <>
+          <div className="form-group"><label htmlFor="latitude">Enlem (Latitude):</label><input type="text" id="latitude" value={formatListInput(localConfig.data_sourcing?.latitude)} onChange={(e) => handleChange(e, 'data_sourcing.latitude')} className={errors['data_sourcing.latitude'] ? 'input-error' : ''} /><small>Birden fazla değer virgülle ayrılabilir.</small>{errors['data_sourcing.latitude'] && <span className="form-error-message">{errors['data_sourcing.latitude']}</span>}</div>
+          <div className="form-group"><label htmlFor="longitude">Boylam (Longitude):</label><input type="text" id="longitude" value={formatListInput(localConfig.data_sourcing?.longitude)} onChange={(e) => handleChange(e, 'data_sourcing.longitude')} className={errors['data_sourcing.longitude'] ? 'input-error' : ''} /><small>Birden fazla değer virgülle ayrılabilir.</small>{errors['data_sourcing.longitude'] && <span className="form-error-message">{errors['data_sourcing.longitude']}</span>}</div>
+          <div className="form-group"><label htmlFor="hourly_vars">Saatlik Değişkenler:</label><input type="text" id="hourly_vars" value={formatListInput(localConfig.data_sourcing?.hourly_vars)} disabled /><small>Kullanılacak hava durumu özellikleri (şimdilik sabit).</small></div>
+        </>
+      ))}
+      {renderSharedFieldset('feature_engineering', 'Özellik Mühendisliği', (
+        <div className="form-group">
+          <label htmlFor="target_col">Hedef Değişken:</label>
+          <select id="target_col" value={localConfig.feature_engineering?.target_col || 'temperature_2m'} onChange={(e) => handleChange(e, 'feature_engineering.target_col')}>
+            <option value="temperature_2m">Sıcaklık (2m)</option>
+            <option value="relative_humidity_2m">Bağıl Nem (2m)</option>
+            <option value="precipitation">Yağış</option>
+            <option value="cloud_cover">Bulut Örtüsü</option>
+          </select>
+        </div>
+      ))}
+      {renderSharedFieldset('model_params', 'Model Parametreleri', (
+        <>
+          <div className="form-group"><label htmlFor="sequence_length">Sekans Uzunluğu (Saat):</label><input type="text" id="sequence_length" value={formatListInput(localConfig.model_params?.sequence_length)} onChange={(e) => handleChange(e, 'model_params.sequence_length')} /><small>Geçmiş kaç saatlik veri kullanılacak.</small></div>
+          <div className="form-group"><label htmlFor="hidden_size">Gizli Katman Boyutu:</label><input type="text" id="hidden_size" value={formatListInput(localConfig.model_params?.hidden_size)} onChange={(e) => handleChange(e, 'model_params.hidden_size')} /></div>
+        </>
+      ))}
+      {renderSharedFieldset('training_params', 'Eğitim Parametreleri', (
+        <>
+          <div className="form-group"><label htmlFor="epochs">Epoch Sayısı:</label><input type="text" id="epochs" value={formatListInput(localConfig.training_params?.epochs)} onChange={(e) => handleChange(e, 'training_params.epochs')} /></div>
+          <div className="form-group"><label htmlFor="lr">Öğrenme Oranı (LR):</label><input type="text" id="lr" value={formatListInput(localConfig.training_params?.lr)} onChange={(e) => handleChange(e, 'training_params.lr')} /></div>
+          <div className="form-group"><label htmlFor="test_size">Test Seti Boyutu:</label><input type="text" id="test_size" value={formatListInput(localConfig.training_params?.test_size)} onChange={(e) => handleChange(e, 'training_params.test_size')} /></div>
+          <div className="form-group"><label htmlFor="validate_every">Doğrulama Sıklığı (Epoch):</label><input type="text" id="validate_every" value={formatListInput(localConfig.training_params?.validate_every)} onChange={(e) => handleChange(e, 'training_params.validate_every')} /></div>
+        </>
+      ))}
+      {renderSharedFieldset('system', 'Sistem Ayarları', (
+        <div className="form-group"><label htmlFor="cache_max_age_hours">Önbellek Yaşam Süresi (saat):</label><input type="text" id="cache_max_age_hours" value={formatListInput(localConfig.system?.cache_max_age_hours)} onChange={(e) => handleChange(e, 'system.cache_max_age_hours')} /></div>
+      ))}
+    </>
+  );
+}
+WeatherForecasterConfigForm.propTypes = { config: PropTypes.object, onConfigChange: PropTypes.func.isRequired, errors: PropTypes.object.isRequired };
+
 
 // --- Ana NewExperiment Bileşeni (Formu ve Butonları Yöneten Dış Bileşen) ---
-// Bu bileşen artık bir React sayfası değil, NewExperimentPanel içinde kullanılacak.
 
 function NewExperiment({ onExperimentStarted, onClosePanel }) { 
   const [pipelines, setPipelines] = useState([]);
@@ -311,7 +254,7 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
       } finally { setIsLoading(false); }
     };
     loadPipelines();
-  }, [selectedPipelineId]); 
+  }, []); 
 
   useEffect(() => {
     const loadPipelineConfig = async (pipelineId) => {
@@ -322,13 +265,10 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
         return;
       }
       setIsLoading(true);
-      setCurrentConfig(null); 
-      setDefaultConfig(null);
       setFormErrors({});
       try {
         const { data } = await fetchPipelineDefaultConfig(pipelineId);
-        const formattedData = formatConfigForUI(data); 
-        setCurrentConfig(formattedData); 
+        setCurrentConfig(data);
         setDefaultConfig(JSON.parse(JSON.stringify(data))); 
       } catch (error) { 
         toast.error(`Konfigürasyon yüklenemedi: ${error.response?.data?.detail || error.message}`); 
@@ -341,89 +281,17 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
     loadPipelineConfig(selectedPipelineId);
   }, [selectedPipelineId]);
 
-  const formatConfigForUI = (config) => {
-    const formatted = {};
-    for (const key in config) {
-        if (typeof config[key] === 'object' && config[key] !== null && !Array.isArray(config[key])) {
-            formatted[key] = formatConfigForUI(config[key]); 
-        } 
-        else if (Array.isArray(config[key]) || typeof config[key] === 'number') {
-            formatted[key] = formatListInput(config[key]); 
-        }
-        else {
-            formatted[key] = config[key];
-        }
-    }
-    return formatted;
-  };
-
   const handleResetToDefault = useCallback(() => {
     if (defaultConfig) {
-      setCurrentConfig(formatConfigForUI(defaultConfig));
+      setCurrentConfig(JSON.parse(JSON.stringify(defaultConfig)));
       setFormErrors({});
       toast.info('Konfigürasyon varsayılan ayarlara sıfırlandı.');
     }
   }, [defaultConfig]);
 
   const validateConfig = (config) => {
-    const errors = {};
-
-    const validateNumberField = (value, path, min = -Infinity, max = Infinity) => {
-      const parsedValues = parseNumberListInput(value); 
-      
-      if (parsedValues.length === 0) {
-          errors[path.join('-')] = 'Bu alan boş bırakılamaz.';
-          return;
-      }
-      if (parsedValues.some(v => typeof v !== 'number' || isNaN(v) || v < min || v > max)) {
-          errors[path.join('-')] = `${path[path.length - 1]} için tüm değerler sayısal olmalı ve ${min} ile ${max} arasında olmalıdır.`;
-      }
-    };
-
-    const validateStringField = (value, path) => {
-        if (Array.isArray(value)) { 
-            if (value.length === 0 || value.some(v => typeof v !== 'string' || v.trim() === '')) {
-                errors[path.join('-')] = `${path[path.length - 1]} boş bırakılamaz veya boş öğe içeremez.`;
-            }
-        } else if (typeof value !== 'string' || value.trim() === '') { 
-            errors[path.join('-')] = `${path[path.length - 1]} boş bırakılamaz.`;
-        }
-    };
-
-    if (config.data_sourcing) {
-        validateStringField(config.data_sourcing.ticker, ['data_sourcing', 'ticker']);
-    }
-
-    if (config.feature_engineering) {
-        if (typeof config.feature_engineering.target_col_transform !== 'string' || !['none', 'log'].includes(config.feature_engineering.target_col_transform.toLowerCase())) {
-            errors['feature_engineering-target_col_transform'] = 'Geçersiz dönüşüm seçimi.';
-        }
-    }
-
-    if (config.model_params) {
-      validateNumberField(config.model_params.sequence_length, ['model_params', 'sequence_length'], 1); 
-      validateNumberField(config.model_params.hidden_size, ['model_params', 'hidden_size'], 1);     
-    }
-
-    if (config.training_params) {
-      validateNumberField(config.training_params.epochs, ['training_params', 'epochs'], 1);         
-      validateNumberField(config.training_params.lr, ['training_params', 'lr'], 0);                 
-      validateNumberField(config.training_params.test_size, ['training_params', 'test_size'], 0, 1); 
-      validateNumberField(config.training_params.validate_every, ['training_params', 'validate_every'], 1); 
-      
-      if (typeof config.training_params.optimizer !== 'string' || !['adam', 'sgd'].includes(config.training_params.optimizer.toLowerCase())) {
-          errors['training_params-optimizer'] = 'Geçersiz optimizer seçimi.';
-      }
-    }
-
-    if (config.system) {
-        if (typeof config.system.caching_enabled !== 'boolean') { 
-            errors['system-caching_enabled'] = 'Önbellek etkinleştirme seçimi yapılmalı.';
-        }
-        validateNumberField(config.system.cache_max_age_hours, ['system', 'cache_max_age_hours'], 0); 
-    }
-    
-    return errors;
+    // Gelecekteki geliştirmeler için yer tutucu
+    return {};
   };
 
   const handleSubmit = async (e) => {
@@ -433,41 +301,25 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
         return;
     }
 
-    const configToSendToApi = JSON.parse(JSON.stringify(currentConfig));
+    let configToSendToApi = JSON.parse(JSON.stringify(currentConfig));
     
-    const numericFieldsPaths = [
-        ['model_params', 'sequence_length'],
-        ['model_params', 'hidden_size'],
-        ['training_params', 'epochs'],
-        ['training_params', 'lr'],
-        ['training_params', 'test_size'],
-        ['training_params', 'validate_every'],
-        ['system', 'cache_max_age_hours']
-    ];
-
-    numericFieldsPaths.forEach(path => {
-        let current = configToSendToApi;
-        for (let i = 0; i < path.length - 1; i++) {
-            current = current[path[i]];
-            if (current === undefined || current === null) return; 
-        }
-        const fieldName = path[path.length - 1];
-        
-        if (current && current[fieldName] !== undefined && current[fieldName] !== null) {
-            const parsed = parseNumberListInput(current[fieldName]);
-            if (parsed.length === 1 && !isNaN(parsed[0])) {
-                current[fieldName] = parsed[0];
-            } else {
-                current[fieldName] = parsed; 
+    // UI'daki string listelerini sayısal listelere/değerlere dönüştür
+    const processNode = (node) => {
+        for (const key in node) {
+            if (typeof node[key] === 'object' && node[key] !== null && !Array.isArray(node[key])) {
+                processNode(node[key]);
+            } else if (typeof node[key] === 'string' && key !== 'ticker' && key !== 'optimizer') {
+                // Ticker gibi string olması gerekenleri hariç tut
+                const numbers = parseNumberListInput(node[key]);
+                if (numbers.length > 0) { // Sadece en az bir geçerli sayı varsa dönüştür
+                    node[key] = numbers.length === 1 ? numbers[0] : numbers;
+                }
             }
         }
-    });
-
-    if (configToSendToApi.data_sourcing?.ticker && Array.isArray(configToSendToApi.data_sourcing.ticker) && configToSendToApi.data_sourcing.ticker.length === 1) {
-        configToSendToApi.data_sourcing.ticker = configToSendToApi.data_sourcing.ticker[0];
-    }
+    };
+    processNode(configToSendToApi);
     
-    const errors = validateConfig(configToSendToApi); 
+    const errors = validateConfig(configToSendToApi);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors); 
       toast.error('Lütfen formdaki hataları düzeltin.');
@@ -477,21 +329,18 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
 
     setIsSubmitting(true);
     configToSendToApi.pipeline_name = selectedPipelineId;
-
     if (batchName.trim()) { 
       configToSendToApi.batch_name = batchName.trim();
-    } else {
-        delete configToSendToApi.batch_name;
     }
 
     try {
       const { data } = await startNewExperiment(configToSendToApi); 
       if (data.batch_id) {
-        toast.success(`🎉 Batch görevi (${data.task_ids.length} deney) başarıyla gönderildi! Batch ID: ${data.batch_id.slice(0, 8)}...`);
+        toast.success(`🎉 Batch görevi (${data.task_ids.length} deney) başarıyla gönderildi!`);
       } else {
-        toast.success(`🚀 Görev başarıyla gönderildi! Deney ID: ${data.task_id.slice(0, 8)}...`);
+        toast.success(`🚀 Görev başarıyla gönderildi!`);
       }
-      if (onExperimentStarted) onExperimentStarted(data.task_id); // Paneli kapatıp ana sayfaya yönlendirir
+      if (onExperimentStarted) onExperimentStarted(data.task_id);
     } catch (err) {
       toast.error('Deney başlatılamadı. API/Worker loglarını veya tarayıcı konsolunu kontrol edin.');
       console.error("Deney başlatma hatası:", err.response?.data?.detail || err.message || err);
@@ -503,16 +352,14 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
   const selectedPipelineDetails = pipelines.find(p => p.id === selectedPipelineId);
 
   const renderSelectedPipelineForm = () => {
-    if (isLoading) {
-        return <p>Parametreler yükleniyor...</p>;
-    }
-    if (!currentConfig) { 
-        return <p>Bu pipeline için düzenlenebilir konfigürasyon bulunamadı.</p>;
-    }
+    if (isLoading) return <p>Parametreler yükleniyor...</p>;
+    if (!currentConfig || Object.keys(currentConfig).length === 0) return <p>Bu pipeline için düzenlenebilir konfigürasyon bulunamadı.</p>;
     
     switch (selectedPipelineId) {
       case 'stock_predictor':
         return <StockPredictorConfigForm config={currentConfig} onConfigChange={setCurrentConfig} errors={formErrors} />;
+      case 'weather_forecaster':
+        return <WeatherForecasterConfigForm config={currentConfig} onConfigChange={setCurrentConfig} errors={formErrors} />;
       default:
         return <p>Lütfen bir pipeline seçin veya bu pipeline için yapılandırma formu bulunamadı.</p>;
     }
@@ -530,26 +377,19 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
             </div>
             <div className="form-group">
               <label htmlFor="batch-name">Deney Grubu Adı (İsteğe Bağlı)</label>
-              <input 
-                type="text" 
-                id="batch-name" 
-                value={batchName} 
-                onChange={(e) => setBatchName(e.target.value)} 
-                placeholder="Örn: LR ve Epoch Optimizasyonu"
-                disabled={isLoading || isSubmitting}
-              />
-              <small style={{ color: 'var(--text-color-darker)', fontSize: '0.85em' }}>
-                Birden fazla parametre kombinasyonu gönderirken grubu isimlendirmek için kullanılır.
-              </small>
+              <input type="text" id="batch-name" value={batchName} onChange={(e) => setBatchName(e.target.value)} placeholder="Örn: LR ve Epoch Optimizasyonu" disabled={isLoading || isSubmitting} />
+              <small>Birden fazla parametre kombinasyonu gönderirken grubu isimlendirmek için kullanılır.</small>
             </div>
           </div>
           
-          <div className="card" style={{padding: 0}}> 
-            <div className="collapsible-header" onClick={handleResetToDefault} style={{borderBottom: 'none', borderRadius: '8px', marginBottom: '15px', justifyContent: 'center'}}>
+          <div className="card" style={{padding: 0, marginTop: '20px'}}> 
+            <div onClick={handleResetToDefault} style={{borderBottom: '1px solid var(--border-color)', padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-color-darker)'}}>
                 <span role="img" aria-label="reset">🔄</span> Varsayılan Konfigürasyona Dön
             </div>
-            <h3>Deney Parametreleri</h3>
-            {renderSelectedPipelineForm()}
+            <div style={{padding: '15px'}}>
+                <h3>Deney Parametreleri</h3>
+                {renderSelectedPipelineForm()}
+            </div>
           </div>
         </div>
 
