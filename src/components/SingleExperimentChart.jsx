@@ -122,19 +122,15 @@ function SingleExperimentChart({
                     }
 
                     // Tahmin verisini güncelleme (sadece validation_data varsa ve geçerliyse)
-                    // x_axis'in dolu ve geçerli olduğundan emin ol
                     if (data.details.validation_data && Array.isArray(data.details.validation_data.x_axis) && data.details.validation_data.x_axis.length > 0) {
-                        // KRİTIK DÜZELTME: Tahmin grafiği verilerini doğrudan buradan al ve kullan.
-                        // Tahmin grafiği için X ekseni ve Y değerlerinin Date objeleri olarak parse edilmesi
-                        // Chart.js TimeScale için önemlidir.
                         updatedPrediction = {
-                            x_axis: data.details.validation_data.x_axis, // ISO string olarak geliyor
+                            x_axis: data.details.validation_data.x_axis, 
                             y_true: data.details.validation_data.y_true,
                             y_pred: data.details.validation_data.y_pred,
                         };
                     }
                     
-                    // console.log("LIVE DATA UPDATE:", { updatedLoss, updatedPrediction }); 
+                    console.log("LIVE DATA UPDATE:", { updatedLoss, updatedPrediction }); // <-- Bu satırın aktif olduğundan emin olun
                     return { loss: updatedLoss, prediction: updatedPrediction };
                 });
             } else if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
