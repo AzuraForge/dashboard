@@ -1,7 +1,7 @@
 // dashboard/src/components/SingleExperimentChart.jsx
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'; 
-import PropTypes from 'prop-types';
+import PropTypes from 'prop-types'; 
 import { Line } from 'react-chartjs-2';
 import { 
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, 
@@ -32,23 +32,21 @@ const getChartOptions = (title, chartColors, isTimeScale = false, enableZoom = f
             label: (ctx) => `${ctx.dataset.label}: ${typeof ctx.parsed.y === 'number' ? ctx.parsed.y.toFixed(4) : ctx.parsed.y}`,
         }
       },
-      // BURADAKİ DÜZELTME: Zoom plugin'in sıfırlama işlevi
       zoom: {
-        pan: { enabled: enableZoom, mode: 'x', modifierKey: 'alt', }, // Sadece tahmin grafiği ve report modda pan
-        zoom: { wheel: { enabled: enableZoom }, pinch: { enabled: enableZoom }, mode: 'x' }, // Sadece tahmin grafiği ve report modda zoom
-        onZoomComplete: ({chart}) => { // Zoom sıfırlama için double click
+        pan: { enabled: enableZoom, mode: 'x', modifierKey: 'alt', }, 
+        zoom: { wheel: { enabled: enableZoom }, pinch: { enabled: true }, mode: 'x' }, 
+        onZoomComplete: ({chart}) => { 
           if (chart.options.plugins.zoom.enabled) {
             if (chart.resetZoom) chart.resetZoom();
           }
         },
-        // doubleClick: false, // Double click zoomu kapat
       }
     },
     scales: { 
       y: { 
         grid: { color: chartColors.border, borderDash: [2, 4], drawTicks: false },
         ticks: { display: compactMode ? false : true, padding: 5, maxTicksLimit: compactMode ? 2 : 5, font: { size: compactMode ? 8 : 10, color: chartColors.textColorDarker } },
-        beginAtZero: true, 
+        beginAtZero: false, 
       }, 
       x: {
         grid: { display: false },
@@ -65,7 +63,7 @@ const getChartOptions = (title, chartColors, isTimeScale = false, enableZoom = f
   if (isTimeScale) {
     options.scales.x = { 
       type: 'time', 
-      time: { unit: 'day', tooltipFormat: 'yyyy-MM-dd' },
+      time: { unit: 'day', tooltipFormat: 'yyyy-MM-dd' }, 
       ticks: { font: { size: compactMode ? 8 : 10, color: chartColors.textColorDarker } } 
     };
   }
@@ -100,7 +98,6 @@ function SingleExperimentChart({
 
   useEffect(() => {
     let socket;
-    // Sadece live mod ve taskId varsa WebSocket bağlantısı kur
     if (mode === 'live' && taskId) {
         socket = new WebSocket(`ws://localhost:8000/ws/task_status/${taskId}`);
         
@@ -111,31 +108,41 @@ function SingleExperimentChart({
                     let updatedLoss = [...prev.loss];
                     let updatedPrediction = { ...prev.prediction };
 
+                    // Kayıp verisini güncelleme
                     if (data.details.loss !== undefined) {
                         const newLoss = data.details.loss;
                         const newEpoch = data.details.epoch;
-                        const lastEpochIndex = updatedLoss.length - 1;
                         if (newEpoch > updatedLoss.length) { 
                             updatedLoss.push(newLoss);
-                        } else if (lastEpochIndex >= 0) { 
-                            updatedLoss[lastEpochIndex] = newLoss;
+                        } else if (newEpoch -1 >= 0 && newEpoch -1 < updatedLoss.length) { 
+                            updatedLoss[newEpoch -1] = newLoss;
                         } else { 
                             updatedLoss.push(newLoss);
                         }
                     }
-                    // KRİTİK: validation_data varsa prediction'ı güncelle
-                    if (data.details.validation_data) {
-                        updatedPrediction = data.details.validation_data;
+
+                    // Tahmin verisini güncelleme (sadece validation_data varsa ve geçerliyse)
+                    if (data.details.validation_data && Array.isArray(data.details.validation_data.x_axis) && data.details.validation_data.x_axis.length > 0) {
+                        // KRİTİK DÜZELTME: Tahmin grafiği verilerini doğrudan buradan al ve kullan.
+                        // Tahmin grafiği için X ekseni ve Y değerlerinin Date objeleri olarak parse edilmesi
+                        // Chart.js TimeScale için önemlidir.
+                        updatedPrediction = {
+                            x_axis: data.details.validation_data.x_axis, // ISO string olarak geliyor
+                            y_true: data.details.validation_data.y_true,
+                            y_pred: data.details.validation_data.y_pred,
+                        };
                     }
+                    
+                    // console.log("LIVE DATA UPDATE:", { updatedLoss, updatedPrediction }); 
                     return { loss: updatedLoss, prediction: updatedPrediction };
                 });
-            } else if (data.state === 'SUCCESS' && data.result?.results) {
+            } else if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
                 setLiveData({
-                    loss: data.result.results.history?.loss || [],
+                    loss: data.result?.results?.history?.loss || [],
                     prediction: {
-                        x_axis: data.result.results.time_index || [],
-                        y_true: data.result.results.y_true || [],
-                        y_pred: data.result.results.y_pred || [],
+                        x_axis: data.result?.results?.time_index || [],
+                        y_true: data.result?.results?.y_true || [],
+                        y_pred: data.result?.results?.y_pred || [],
                     }
                 });
             }
@@ -143,14 +150,13 @@ function SingleExperimentChart({
         
         socket.onerror = (err) => { console.error(`WebSocket Error for task ${taskId}:`, err); };
         socket.onclose = () => {}; 
+        return () => { 
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close(1000, "Component unmounting or task finished"); 
+            }
+        };
     }
-    
-    return () => { 
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.close(1000, "Component unmounting or task finished"); 
-      }
-    };
-  }, [mode, taskId]); 
+}, [mode, taskId]); 
 
   // Hangi veriyi kullanacağımızı belirle (liveData veya reportData)
   const currentLossHistory = mode === 'live' ? liveData.loss : reportData?.history?.loss || [];
@@ -175,8 +181,9 @@ function SingleExperimentChart({
         }]
       };
     } else if (chartType === 'prediction') {
+      // Tahmin grafiği için: x_axis'i tarih olarak kullanıyoruz, y_true ve y_pred değerleri
       return {
-        labels: currentPredictionXAxis,
+        // labels: currentPredictionXAxis, // TimeScale'da labels yerine doğrudan data objelerinde x değeri kullanılır.
         datasets: [
           {
             label: 'Gerçek', 
@@ -184,19 +191,21 @@ function SingleExperimentChart({
             borderColor: chartColors.info,
             backgroundColor: `color-mix(in srgb, ${chartColors.info} 20%, transparent)`,
             pointRadius: 0,
-            fill: 'origin'
+            fill: false, 
           },
           {
             label: 'Tahmin', 
             data: currentPredictionYPred,
             borderColor: chartColors.error,
-            borderDash: [5, 5],
+            borderDash: [5, 5], 
             pointRadius: 0,
             fill: false
           }
         ].map(dataset => ({
             ...dataset,
-            data: dataset.data.map((val, i) => ({ x: currentPredictionXAxis[i], y: val }))
+            // KRİTİK DÜZELTME: x_axis'ten gelen ISO string'leri Date objesine dönüştürüyoruz.
+            // Chart.js TimeScale, Date objelerini daha güvenilir bir şekilde işler.
+            data: dataset.data.map((val, i) => ({ x: new Date(currentPredictionXAxis[i]), y: val }))
         }))
       };
     }
@@ -216,9 +225,9 @@ function SingleExperimentChart({
           options={getChartOptions(
             chartTitle, 
             chartColors, 
-            chartType === 'prediction', 
-            chartType === 'prediction' && mode === 'report', 
-            true 
+            chartType === 'prediction', // prediction grafiği için isTimeScale = true
+            chartType === 'prediction' && mode === 'report', // sadece report modunda zoom etkin
+            true // compact mode
           )} 
         />
       ) : (
@@ -226,7 +235,7 @@ function SingleExperimentChart({
           {mode === 'live' ? 'Canlı veri bekleniyor...' : 'Veri mevcut değil.'}
         </div>
       )}
-       {(chartType === 'prediction' && mode === 'report') && ( 
+      {(chartType === 'prediction' && mode === 'report') && ( 
             <p className="chart-instructions">Yakınlaştırmak için fare tekerleği, kaydırmak için Alt + Sürükle.</p>
         )}
     </div>

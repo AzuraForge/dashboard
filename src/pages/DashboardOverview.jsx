@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'; // useCallback eklendi
+import { useState, useEffect, useMemo, useCallback } from 'react'; 
 import ExperimentCard from '../components/ExperimentCard'; 
 import ComparisonView from '../components/ComparisonView';
 import { fetchExperiments } from '../services/api'; 
@@ -16,7 +16,6 @@ function DashboardOverview() {
   const [comparisonData, setComparisonData] = useState(null);
 
   // API'den tüm deney verilerini tek çağrıda çekiyoruz
-  // useCallback kullanarak bu fonksiyonun gereksiz yere yeniden oluşmasını engelliyoruz
   const getExperiments = useCallback(async (showLoadingIndicator = false) => {
     if (showLoadingIndicator) setLoading(true);
     try {
@@ -29,14 +28,13 @@ function DashboardOverview() {
     } finally {
       if (showLoadingIndicator) setLoading(false);
     }
-  }, []); // Bağımlılık yok, sadece bir kez oluşturulacak
+  }, []); 
 
   useEffect(() => {
     getExperiments(true);
-    // BURADAKİ GÜNCELLEME: API çağrısı sıklığını azaltıyoruz. 5sn -> 10sn
     const intervalId = setInterval(() => getExperiments(false), 10000); 
     return () => clearInterval(intervalId);
-  }, [getExperiments]); // getExperiments bağımlılığını ekle
+  }, [getExperiments]); 
 
   const allStatuses = useMemo(() => {
     const statuses = new Set(experiments.map(exp => exp.status));
@@ -63,7 +61,7 @@ function DashboardOverview() {
     });
   }, [experiments, filterStatus, searchTerm]);
   
-  const handleComparisonSelect = useCallback((experimentId) => { // useCallback eklendi
+  const handleComparisonSelect = useCallback((experimentId) => { 
     setSelectedForComparison(prev => {
       const newSelection = new Set(prev);
       if (newSelection.has(experimentId)) {
@@ -73,9 +71,9 @@ function DashboardOverview() {
       }
       return newSelection;
     });
-  }, []); // Bağımlılık yok
+  }, []); 
 
-  const handleStartComparison = useCallback(async () => { // useCallback eklendi
+  const handleStartComparison = useCallback(async () => { 
     const idsToCompare = Array.from(selectedForComparison);
     if (idsToCompare.length < 2) {
         toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.');
@@ -86,18 +84,20 @@ function DashboardOverview() {
         experiments.find(exp => exp.experiment_id === id)
     ).filter(Boolean); 
 
+    // KRİTİK DÜZELTME: Karşılaştırma için sadece kayıp geçmişi olan deneyleri filtrele.
+    // Durumun 'SUCCESS' olması zorunlu değil, çünkü 'FAILURE' olsa bile grafiği çizilebilir.
     const validDataForComparison = dataToCompare.filter(exp => 
-        exp.status === 'SUCCESS' && exp.results?.history?.loss && exp.results.history.loss.length > 0
+        exp.results?.history?.loss && exp.results.history.loss.length > 0
     );
 
     if (validDataForComparison.length < 2) {
-        toast.warn('Karşılaştırma için en az 2 adet, başarılı ve kayıp geçmişi olan deney seçmelisiniz.');
+        toast.warn('Karşılaştırma için en az 2 adet, kayıp geçmişi olan deney seçmelisiniz.');
         setComparisonData(null); 
         return;
     }
 
     setComparisonData(validDataForComparison);
-  }, [selectedForComparison, experiments]); // Bağımlılıkları ekle
+  }, [selectedForComparison, experiments]); 
 
   if (loading) return <p style={{textAlign: 'center', padding: '40px'}}>Deney verileri yükleniyor...</p>;
   if (error) return <p style={{textAlign: 'center', padding: '40px', color: 'var(--error-color)'}}>{error}</p>;
@@ -113,27 +113,25 @@ function DashboardOverview() {
       
       <div className="card" style={{ marginBottom: '25px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="search-term">Arama</label>
-              <input type="text" id="search-term" placeholder="ID, Pipeline, Sembol ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="filter-status">Durum</label>
-              <select id="filter-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                {allStatuses.map(s => <option key={s} value={s}>{s === 'ALL' ? 'Tümü' : s}</option>)}
-              </select>
-            </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label htmlFor="search-term">Arama</label>
+            <input type="text" id="search-term" placeholder="ID, Pipeline, Sembol ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <button 
-            className="button-primary" 
-            onClick={handleStartComparison} 
-            disabled={selectedForComparison.size < 2} 
-            title={selectedForComparison.size < 2 ? 'Karşılaştırmak için en az 2 deney seçin' : ''}
-          >
-            <span role="img" aria-label="scales">⚖️</span> Seçilenleri Karşılaştır ({selectedForComparison.size})
-          </button>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label htmlFor="filter-status">Durum</label>
+            <select id="filter-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+              {allStatuses.map(s => <option key={s} value={s}>{s === 'ALL' ? 'Tümü' : s}</option>)}
+            </select>
+          </div>
         </div>
+        <button 
+          className="button-primary" 
+          onClick={handleStartComparison} 
+          disabled={selectedForComparison.size < 2} 
+          title={selectedForComparison.size < 2 ? 'Karşılaştırmak için en az 2 deney seçin' : ''}
+        >
+          <span role="img" aria-label="scales">⚖️</span> Seçilenleri Karşılaştır ({selectedForComparison.size})
+        </button>
       </div>
       
       <div className="experiments-list-container"> 
@@ -145,7 +143,7 @@ function DashboardOverview() {
               key={exp.experiment_id} 
               experiment={exp} 
               isSelected={selectedForComparison.has(exp.experiment_id)}
-              onSelect={handleComparisonSelect} // useCallback ile gelen fonksiyonu direk geçir
+              onSelect={() => handleComparisonSelect(exp.experiment_id)} 
             />
           ))
         )}
