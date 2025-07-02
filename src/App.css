@@ -360,6 +360,12 @@ body {
     align-items: center;
     gap: 10px;
     flex-shrink: 0; 
+    padding: 5px 10px; /* <--- YENİ: Tıklama alanını genişletir */
+    margin-left: -10px; /* <--- YENİ: Boşlukları dengelemek için */
+    cursor: pointer; /* <--- YENİ: Kullanıcıya tıklanabilir olduğunu gösterir */
+}
+.experiment-card .card-checkbox-status input[type="checkbox"] {
+    cursor: pointer; /* <--- YENİ: Checkbox'ın kendisinin de cursor'ı olması için */
 }
 
 .experiment-card .card-main-info {
