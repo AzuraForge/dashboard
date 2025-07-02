@@ -122,8 +122,9 @@ function SingleExperimentChart({
                     }
 
                     // Tahmin verisini güncelleme (sadece validation_data varsa ve geçerliyse)
+                    // x_axis'in dolu ve geçerli olduğundan emin ol
                     if (data.details.validation_data && Array.isArray(data.details.validation_data.x_axis) && data.details.validation_data.x_axis.length > 0) {
-                        // KRİTİK DÜZELTME: Tahmin grafiği verilerini doğrudan buradan al ve kullan.
+                        // KRİTIK DÜZELTME: Tahmin grafiği verilerini doğrudan buradan al ve kullan.
                         // Tahmin grafiği için X ekseni ve Y değerlerinin Date objeleri olarak parse edilmesi
                         // Chart.js TimeScale için önemlidir.
                         updatedPrediction = {
@@ -181,9 +182,7 @@ function SingleExperimentChart({
         }]
       };
     } else if (chartType === 'prediction') {
-      // Tahmin grafiği için: x_axis'i tarih olarak kullanıyoruz, y_true ve y_pred değerleri
       return {
-        // labels: currentPredictionXAxis, // TimeScale'da labels yerine doğrudan data objelerinde x değeri kullanılır.
         datasets: [
           {
             label: 'Gerçek', 
@@ -203,8 +202,6 @@ function SingleExperimentChart({
           }
         ].map(dataset => ({
             ...dataset,
-            // KRİTİK DÜZELTME: x_axis'ten gelen ISO string'leri Date objesine dönüştürüyoruz.
-            // Chart.js TimeScale, Date objelerini daha güvenilir bir şekilde işler.
             data: dataset.data.map((val, i) => ({ x: new Date(currentPredictionXAxis[i]), y: val }))
         }))
       };
@@ -225,9 +222,9 @@ function SingleExperimentChart({
           options={getChartOptions(
             chartTitle, 
             chartColors, 
-            chartType === 'prediction', // prediction grafiği için isTimeScale = true
-            chartType === 'prediction' && mode === 'report', // sadece report modunda zoom etkin
-            true // compact mode
+            chartType === 'prediction', 
+            chartType === 'prediction' && mode === 'report', 
+            true 
           )} 
         />
       ) : (

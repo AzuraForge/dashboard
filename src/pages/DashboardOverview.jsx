@@ -32,7 +32,7 @@ function DashboardOverview() {
 
   useEffect(() => {
     getExperiments(true);
-    const intervalId = setInterval(() => getExperiments(false), 10000); 
+    const intervalId = setInterval(() => getExperiments(false), 20000); // <--- BU SATIR DEĞİŞTİ (Polling süresi artırıldı)!
     return () => clearInterval(intervalId);
   }, [getExperiments]); 
 
