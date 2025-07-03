@@ -7,18 +7,18 @@
   transition: all 0.2s ease-in-out;
 }
 
+.expanded {
+    border-color: var(--secondary-color);
+    box-shadow: var(--shadow-lg), 0 0 0 3px color-mix(in srgb, var(--secondary-color) 30%, transparent);
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 15px 20px;
   cursor: pointer;
-  border-bottom: 1px solid transparent; /* Varsayılan olarak görünmez */
   transition: border-color 0.2s ease;
-}
-
-:global(.expanded) .header { /* isExpanded durumunda border'ı göster */
-  border-color: var(--border-color);
 }
 
 .header:hover {
@@ -78,8 +78,50 @@
 .pending { background-color: var(--text-color-darker); }
 .mixed { background-color: var(--warning-color); }
 
-.experimentsList {
+.content {
+  border-top: 1px solid var(--border-color);
+  padding: 0;
+}
+
+.viewToggle {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 20px;
+  background-color: var(--bg-color);
+}
+
+.viewToggle button {
+  background: none;
+  border: none;
+  color: var(--text-color-darker);
+  padding: 15px 20px;
+  cursor: pointer;
+  font-size: 0.95em;
+  font-weight: 600;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s ease;
+}
+
+.viewToggle button:hover {
+  color: var(--text-color);
+}
+
+.viewToggle button.activeView {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.viewToggle button:disabled {
+  color: var(--border-color);
+  cursor: not-allowed;
+}
+
+.viewContent {
   padding: 20px;
+}
+
+.experimentsList {
   display: flex;
   flex-direction: column;
   gap: 20px;

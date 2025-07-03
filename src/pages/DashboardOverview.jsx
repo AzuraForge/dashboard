@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ExperimentCard from '../components/ExperimentCard';
 import BatchCard from '../components/BatchCard';
 import ComparisonView from '../components/ComparisonView';
@@ -11,10 +11,9 @@ function DashboardOverview() {
   const [error, setError] = useState(null);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('ALL');
   
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
-  const [comparisonData, setComparisonData] = useState(null);
+  const [isComparisonModalOpen, setIsComparisonModalOpen] = useState(false);
 
   const getExperiments = useCallback(async (showLoadingIndicator = false) => {
     if (showLoadingIndicator) setLoading(true);
@@ -37,19 +36,15 @@ function DashboardOverview() {
   }, [getExperiments]);
 
   const groupedAndFilteredExperiments = useMemo(() => {
-    // Önce filtrele
     const filtered = experiments.filter(exp => {
-        const statusMatch = filterStatus === 'ALL' || exp.status === filterStatus;
-        if (!statusMatch) return false;
         if (searchTerm) {
             const lowerTerm = searchTerm.toLowerCase();
             return [exp.experiment_id, exp.pipeline_name, exp.config_summary?.ticker, exp.batch_name]
-                .some(field => field && field.toLowerCase().includes(lowerTerm));
+                .some(field => field && String(field).toLowerCase().includes(lowerTerm));
         }
         return true;
     });
 
-    // Sonra grupla
     const batches = {};
     const singleExperiments = [];
 
@@ -57,11 +52,7 @@ function DashboardOverview() {
       const experimentWithSelection = { ...exp, isSelected: selectedForComparison.has(exp.experiment_id) };
       if (exp.batch_id) {
         if (!batches[exp.batch_id]) {
-          batches[exp.batch_id] = {
-            batch_id: exp.batch_id,
-            batch_name: exp.batch_name,
-            experiments: []
-          };
+          batches[exp.batch_id] = { batch_id: exp.batch_id, batch_name: exp.batch_name, experiments: [] };
         }
         batches[exp.batch_id].experiments.push(experimentWithSelection);
       } else {
@@ -69,13 +60,14 @@ function DashboardOverview() {
       }
     });
 
-    // Her batch içindeki deneyleri tarihe göre sırala
     Object.values(batches).forEach(batch => {
       batch.experiments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     });
 
-    return [...Object.values(batches), ...singleExperiments];
-  }, [experiments, filterStatus, searchTerm, selectedForComparison]);
+    const sortedBatches = Object.values(batches).sort((a,b) => new Date(b.experiments[0].created_at) - new Date(a.experiments[0].created_at));
+
+    return [...sortedBatches, ...singleExperiments];
+  }, [experiments, searchTerm, selectedForComparison]);
   
   const handleComparisonSelect = useCallback((experimentId) => {
     setSelectedForComparison(prev => {
@@ -85,16 +77,31 @@ function DashboardOverview() {
     });
   }, []);
 
-  const handleStartComparison = useCallback(() => { 
-    // ... (Bu fonksiyon aynı kalıyor, değişiklik yok)
+  const comparisonData = useMemo(() => {
+    return experiments.filter(exp => selectedForComparison.has(exp.experiment_id));
   }, [selectedForComparison, experiments]);
+
+  const handleStartComparison = useCallback(() => { 
+    if (comparisonData.length < 2) {
+        toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.');
+        return;
+    }
+    setIsComparisonModalOpen(true);
+  }, [comparisonData]);
 
   if (loading) return <p style={{textAlign: 'center', padding: '40px'}}>Yükleniyor...</p>;
   if (error) return <p style={{textAlign: 'center', padding: '40px', color: 'var(--error-color)'}}>{error}</p>;
 
   return (
     <div className="dashboard-overview">
-      {comparisonData && <ComparisonView experiments={comparisonData} onClose={() => setComparisonData(null)}/>}
+      {isComparisonModalOpen && (
+        <ComparisonView
+          experiments={comparisonData}
+          title="Seçilen Deneylerin Karşılaştırması"
+          showCloseButton={true}
+          onClose={() => setIsComparisonModalOpen(false)}
+        />
+      )}
       
       <div className="page-header">
         <h1>Deney Paneli</h1>
@@ -102,11 +109,9 @@ function DashboardOverview() {
       </div>
       
       <div className="card" style={{ marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-        <div style={{display: 'flex', gap: '20px'}}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-                <label htmlFor="search-term">Arama</label>
-                <input type="text" id="search-term" placeholder="ID, Pipeline, Sembol, Grup ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{minWidth: '250px'}} />
-            </div>
+        <div className="form-group" style={{ marginBottom: 0, flexGrow: 1 }}>
+            <label htmlFor="search-term">Arama</label>
+            <input type="text" id="search-term" placeholder="ID, Pipeline, Sembol, Grup ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{minWidth: '250px'}} />
         </div>
         <button 
           className="button-primary" 

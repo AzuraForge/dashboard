@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import ExperimentCard from './ExperimentCard';
+import ComparisonView from './ComparisonView';
 import styles from './BatchCard.module.css';
 
 const ChevronDownIcon = ({ className = '' }) => (
@@ -11,12 +12,13 @@ const ChevronDownIcon = ({ className = '' }) => (
 ChevronDownIcon.propTypes = { className: PropTypes.string };
 
 function BatchCard({ batch, onSelect }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [view, setView] = useState('list');
 
   const batchStatus = useMemo(() => {
     const statuses = new Set(batch.experiments.map(e => e.status));
     if (statuses.has('STARTED') || statuses.has('PROGRESS')) return 'ÇALIŞIYOR';
-    if (statuses.has('PENDING') && statuses.size === 1) return 'BEKLEMEDE';
+    if (statuses.has('PENDING')) return 'BEKLEMEDE';
     if (statuses.has('FAILURE')) return 'HATALI';
     if (Array.from(statuses).every(s => s === 'SUCCESS')) return 'TAMAMLANDI';
     return 'KARIŞIK';
@@ -26,11 +28,16 @@ function BatchCard({ batch, onSelect }) {
     'ÇALIŞIYOR': styles.running,
     'TAMAMLANDI': styles.success,
     'HATALI': styles.failure,
-    'BEKLEMEDE': styles.pending
-  }[batchStatus] || styles.mixed;
+    'BEKLEMEDE': styles.pending,
+    'KARIŞIK': styles.mixed
+  }[batchStatus];
+
+  const finishedExperiments = useMemo(() => 
+    batch.experiments.filter(e => e.status === 'SUCCESS' || e.status === 'FAILURE'), 
+  [batch.experiments]);
 
   return (
-    <div className={styles.batchContainer}>
+    <div className={`${styles.batchContainer} ${isExpanded ? styles.expanded : ''}`}>
       <header className={styles.header} onClick={() => setIsExpanded(!isExpanded)}>
         <div className={styles.headerLeft}>
           <ChevronDownIcon className={`${styles.icon} ${isExpanded ? '' : styles.collapsed}`} />
@@ -45,16 +52,34 @@ function BatchCard({ batch, onSelect }) {
           <span className={`${styles.statusBadge} ${statusClass}`}>{batchStatus}</span>
         </div>
       </header>
+      
       {isExpanded && (
-        <div className={styles.experimentsList}>
-          {batch.experiments.map(exp => (
-            <ExperimentCard
-              key={exp.experiment_id}
-              experiment={exp}
-              isSelected={exp.isSelected}
-              onSelect={() => onSelect(exp.experiment_id)}
-            />
-          ))}
+        <div className={styles.content}>
+          <div className={styles.viewToggle}>
+            <button onClick={() => setView('list')} className={view === 'list' ? styles.activeView : ''}>Deney Listesi</button>
+            <button onClick={() => setView('summary')} className={view === 'summary' ? styles.activeView : ''} disabled={finishedExperiments.length < 1}>
+              Sonuç Özeti
+            </button>
+          </div>
+
+          <div className={styles.viewContent}>
+            {view === 'list' ? (
+              <div className={styles.experimentsList}>
+                {batch.experiments.map(exp => (
+                  <ExperimentCard
+                    key={exp.experiment_id}
+                    experiment={exp}
+                    isSelected={exp.isSelected}
+                    onSelect={() => onSelect(exp.experiment_id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              finishedExperiments.length > 0 
+                ? <ComparisonView experiments={finishedExperiments} title="Deney Grubu Sonuçları" />
+                : <p>Özeti görüntülemek için en az bir deneyin tamamlanmış olması gerekir.</p>
+            )}
+          </div>
         </div>
       )}
     </div>
