@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { toast } from 'react-toastify';
 import { get, set, cloneDeep, isObject, isArray, isString } from 'lodash';
 import { fetchAvailablePipelines, fetchPipelineDefaultConfig, startNewExperiment } from '../services/api';
+import { handleApiError } from '../utils/errorHandler';
 import styles from './NewExperiment.module.css';
 
 const ChevronDownIcon = ({ className = '' }) => (
@@ -114,7 +115,7 @@ function NewExperiment({ onExperimentStarted }) {
                     setPipelines(response.data);
                     if (!selectedPipelineId) setSelectedPipelineId(response.data[0].id);
                 } else { setPipelines([]); }
-            } catch (error) { toast.error('Pipeline listesi yüklenemedi.'); } 
+            } catch (error) { handleApiError(error, "pipeline listesi yükleme"); } 
             finally { setIsLoading(false); }
         };
         loadPipelines();
@@ -129,7 +130,7 @@ function NewExperiment({ onExperimentStarted }) {
             const { data } = await fetchPipelineDefaultConfig(pipelineId);
             setCurrentConfig(data.default_config || {});
             setCurrentSchema(data.form_schema || null);
-        } catch (error) { toast.error(`Konfigürasyon yüklenemedi: ${error.response?.data?.detail || error.message}`); } 
+        } catch (error) { handleApiError(error, `konfigürasyon yükleme (${pipelineId})`); } 
         finally { setIsLoading(false); }
     }, []);
 
@@ -159,7 +160,7 @@ function NewExperiment({ onExperimentStarted }) {
             const { data } = await startNewExperiment(configToSend); 
             toast.success(data.message || 'Görev başarıyla gönderildi!');
             if (onExperimentStarted) onExperimentStarted();
-        } catch (err) { toast.error('Deney başlatılamadı. Logları kontrol edin.'); } 
+        } catch (err) { handleApiError(err, "deney başlatma"); } 
         finally { setIsSubmitting(false); }
     };
     
