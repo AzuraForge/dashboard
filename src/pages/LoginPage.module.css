@@ -1,0 +1,47 @@
+.container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-color);
+  padding: 2rem;
+}
+
+.loginBox {
+  width: 100%;
+  max-width: 450px;
+  background-color: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 2.5rem 3rem;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.logoWrapper {
+  display: inline-flex;
+  margin-bottom: 1.5rem;
+}
+
+.loginBox h2 {
+  font-size: 1.8em;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.loginBox p {
+  color: var(--text-color-darker);
+  margin-bottom: 2.5rem;
+}
+
+.loginBox form {
+  text-align: left;
+}
+
+.loginBox form .button-primary {
+  width: 100%;
+  padding: 14px;
+  font-size: 1.1em;
+  margin-top: 1rem;
+}

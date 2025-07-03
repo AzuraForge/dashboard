@@ -1,34 +1,42 @@
-import React from 'react';
+// dashboard/src/components/TopNavbar.jsx
 import PropTypes from 'prop-types';
 import { NavLink } from 'react-router-dom';
 import Logo from './Logo';
 import ThemeToggle from './ThemeToggle';
 import styles from './TopNavbar.module.css';
+import { useAuth } from '../context/AuthContext'; // <-- useAuth eklendi
 
 function TopNavbar({ onNewExperimentClick }) {
-  // Aktif link stili için
-  const navLinkStyles = ({ isActive }) => {
-    return {
-      textDecoration: 'none',
-      fontWeight: isActive ? '700' : '500',
-      color: isActive ? 'var(--primary-color)' : 'var(--text-color)',
-      borderColor: isActive ? 'var(--primary-color)' : 'transparent'
-    };
-  };
+  const { isAuthenticated, user, logout } = useAuth(); // <-- Auth context'ten bilgi al
+
+  const navLinkStyles = ({ isActive }) => ({
+    textDecoration: 'none',
+    fontWeight: isActive ? '700' : '500',
+    color: isActive ? 'var(--primary-color)' : 'var(--text-color)',
+    borderColor: isActive ? 'var(--primary-color)' : 'transparent'
+  });
 
   return (
     <header className={styles.navbar}>
       <div className={styles.leftSection}>
         <Logo />
         <nav className={styles.navLinks}>
-            <NavLink to="/" style={navLinkStyles} end>Deneyler</NavLink>
-            <NavLink to="/models" style={navLinkStyles}>Model Kütüphanesi</NavLink>
+          <NavLink to="/" style={navLinkStyles} end>Deneyler</NavLink>
+          <NavLink to="/models" style={navLinkStyles}>Model Kütüphanesi</NavLink>
         </nav>
       </div>
       <div className={styles.rightSection}>
-        <button className="button-primary" onClick={onNewExperimentClick}>
-          <span role="img" aria-label="rocket">🚀</span> Yeni Deney
-        </button>
+        {isAuthenticated && (
+          <>
+            <button className="button-primary" onClick={onNewExperimentClick}>
+              <span role="img" aria-label="rocket">🚀</span> Yeni Deney
+            </button>
+            <div className={styles.userInfo}>
+              <span className={styles.username}>{user.username}</span>
+              <button onClick={logout} className={styles.logoutButton}>Çıkış Yap</button>
+            </div>
+          </>
+        )}
         <ThemeToggle />
       </div>
     </header>

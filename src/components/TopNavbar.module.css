@@ -40,10 +40,42 @@
 .rightSection {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px; /* Gap artırıldı */
 }
 
-/* Logo stilleri de buraya taşındı */
+/* === YENİ stiller === */
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--bg-color);
+  padding: 6px 6px 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+.username {
+  font-weight: 600;
+  color: var(--text-color);
+}
+.logoutButton {
+  background-color: var(--hover-bg);
+  border: 1px solid transparent;
+  color: var(--text-color-darker);
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.logoutButton:hover {
+  color: var(--error-color);
+  border-color: var(--error-color);
+  background-color: color-mix(in srgb, var(--error-color) 15%, transparent);
+}
+/* === BİTTİ === */
+
+
+/* Logo stilleri */
 .logoContainer {
   display: flex;
   align-items: center;
@@ -61,7 +93,7 @@
   transition: color 0.3s;
 }
 
-/* ThemeToggle stilleri de buraya taşındı */
+/* ThemeToggle stilleri */
 .themeToggleButton {
   background-color: transparent;
   color: var(--text-color-darker);
