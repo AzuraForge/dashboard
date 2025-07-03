@@ -1,21 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fetchExperiments } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
-
-// Bu bileşenleri bir sonraki adımda oluşturacağız.
-// import PredictionModal from '../components/PredictionModal';
-// import ModelCard from '../components/ModelCard';
+import PredictionModal from '../components/PredictionModal';
+import ModelCard from '../components/ModelCard';
 
 function ModelRegistry() {
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
-  // const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedModel, setSelectedModel] = useState(null);
 
   const loadModels = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await fetchExperiments();
-      // Sadece başarılı ve modeli kaydedilmiş (model_path'i olan) deneyleri filtrele
       const successfulModels = data.filter(exp => exp.status === 'SUCCESS' && exp.model_path);
       setModels(successfulModels);
     } catch (error) {
@@ -29,6 +26,10 @@ function ModelRegistry() {
     loadModels();
   }, [loadModels]);
 
+  const handlePredictClick = (model) => {
+    setSelectedModel(model);
+  };
+
   return (
     <div className="model-registry">
       <div className="page-header">
@@ -39,19 +40,14 @@ function ModelRegistry() {
       {loading ? (
         <p style={{ textAlign: 'center', padding: '40px' }}>Modeller yükleniyor...</p>
       ) : (
-        <div className="model-list-container">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {models.length > 0 ? (
             models.map(model => (
-              // Geçici olarak basit bir kart gösteriyoruz.
-              // Bu kısım bir sonraki adımda ModelCard bileşeni ile değiştirilecek.
-              <div key={model.experiment_id} className="card" style={{marginBottom: '1rem'}}>
-                <h3 style={{marginTop: 0}}>{model.pipeline_name}</h3>
-                <p style={{fontFamily: 'var(--font-mono)', fontSize: '0.8em', color: 'var(--text-color-darker)'}}>ID: {model.experiment_id}</p>
-                <p><strong>Eğitim Bitiş:</strong> {new Date(model.completed_at).toLocaleString()}</p>
-                <p><strong>Final Kayıp:</strong> {model.results_summary.final_loss?.toFixed(6) ?? 'N/A'}</p>
-                <p><strong>R² Skoru:</strong> {model.results_summary.r2_score?.toFixed(4) ?? 'N/A'}</p>
-                <button className='button-primary' disabled>Tahmin Yap (Yakında)</button>
-              </div>
+              <ModelCard
+                key={model.experiment_id}
+                model={model}
+                onPredictClick={handlePredictClick}
+              />
             ))
           ) : (
             <div className="card" style={{textAlign: 'center'}}>
@@ -62,14 +58,12 @@ function ModelRegistry() {
         </div>
       )}
       
-      {/* 
       {selectedModel && (
         <PredictionModal
           model={selectedModel}
           onClose={() => setSelectedModel(null)}
         />
-      )} 
-      */}
+      )}
     </div>
   );
 }
