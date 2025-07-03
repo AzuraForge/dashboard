@@ -1,12 +1,9 @@
-// dashboard/src/pages/NewExperiment.jsx
-
 import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { toast } from 'react-toastify';
+import { get, set, cloneDeep, isObject, isArray, isString } from 'lodash';
 import { fetchAvailablePipelines, fetchPipelineDefaultConfig, startNewExperiment } from '../services/api';
-import { get, set, cloneDeep, isObject, isArray, isString } from 'lodash'; // Lodash fonksiyonlarını doğrudan import edelim
-
-// === YARDIMCI BİLEŞENLER VE FONKSİYONLAR ===
+import styles from './NewExperiment.module.css';
 
 const ChevronDownIcon = ({ className = '' }) => (
   <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -21,15 +18,10 @@ const parseNumberListInput = (value) => {
     if (typeof value === 'number') return [value];
     if (isString(value)) {
         const parts = value.split(',').map(s => s.trim()).filter(s => s !== '');
-        return parts.map(s => {
-            const num = parseFloat(s.replace(',', '.'));
-            return isNaN(num) ? NaN : num;
-        }).filter(v => !isNaN(v));
+        return parts.map(s => { const num = parseFloat(s.replace(',', '.')); return isNaN(num) ? NaN : num; }).filter(v => !isNaN(v));
     }
     return [];
 };
-
-// === DİNAMİK FORM OLUŞTURUCU ÇEKİRDEĞİ ===
 
 function DynamicFormField({ field, config, onConfigChange }) {
     const { id, path, label, type, placeholder, help_text, options } = field;
@@ -37,15 +29,10 @@ function DynamicFormField({ field, config, onConfigChange }) {
 
     const handleChange = (e) => {
         let newValue;
-        if (e.target.type === 'checkbox') {
-            newValue = e.target.checked;
-        } else if (type === 'select' && (e.target.value === 'true' || e.target.value === 'false')) {
-            newValue = (e.target.value === 'true');
-        } else {
-            newValue = e.target.value;
-        }
+        if (e.target.type === 'checkbox') { newValue = e.target.checked; } 
+        else if (type === 'select' && (e.target.value === 'true' || e.target.value === 'false')) { newValue = (e.target.value === 'true'); } 
+        else { newValue = e.target.value; }
         
-        // DÜZELTME: State'in değiştiğini React'e bildirmek için yeni bir nesne oluşturuyoruz
         const newConfig = cloneDeep(config);
         set(newConfig, path, newValue);
         onConfigChange(newConfig);
@@ -54,11 +41,7 @@ function DynamicFormField({ field, config, onConfigChange }) {
     const renderField = () => {
         switch (type) {
             case 'select':
-                return (
-                    <select id={id} value={String(value)} onChange={handleChange}>
-                        {options?.map(opt => <option key={String(opt.value)} value={String(opt.value)}>{opt.label}</option>)}
-                    </select>
-                );
+                return ( <select id={id} value={String(value)} onChange={handleChange}> {options?.map(opt => <option key={String(opt.value)} value={String(opt.value)}>{opt.label}</option>)} </select> );
             case 'text':
             default:
                 return <input type="text" id={id} value={value} onChange={handleChange} placeholder={placeholder || ''} />;
@@ -80,9 +63,7 @@ function DynamicFormRenderer({ schema, config, onConfigChange }) {
 
     useEffect(() => {
         if (schema?.groups?.length > 0) {
-            const initialExpandedState = {};
-            // Varsayılan olarak ilk grubu açık yap
-            initialExpandedState[schema.groups[0].id] = true;
+            const initialExpandedState = { [schema.groups[0].id]: true };
             setExpandedSections(initialExpandedState);
         }
     }, [schema]);
@@ -98,12 +79,12 @@ function DynamicFormRenderer({ schema, config, onConfigChange }) {
     return (
         <>
             {schema.groups.map(group => (
-                <fieldset key={group.id} className={`form-fieldset collapsible-fieldset ${expandedSections[group.id] ? 'expanded' : ''}`}>
-                    <div className={`collapsible-header ${!expandedSections[group.id] ? 'collapsed' : ''}`} onClick={() => toggleSection(group.id)}>
+                <fieldset key={group.id} className={`${styles.collapsibleFieldset} ${expandedSections[group.id] ? styles.expanded : ''}`}>
+                    <div className={`${styles.collapsibleHeader} ${!expandedSections[group.id] ? styles.collapsed : ''}`} onClick={() => toggleSection(group.id)}>
                         <span>{group.name}</span>
-                        <ChevronDownIcon className="icon" />
+                        <ChevronDownIcon className={styles.icon} />
                     </div>
-                    <div className="collapsible-content">
+                    <div className={styles.collapsibleContent}>
                         {group.fields.map(field => (
                             <DynamicFormField key={field.path} field={field} config={config} onConfigChange={onConfigChange} />
                         ))}
@@ -113,11 +94,9 @@ function DynamicFormRenderer({ schema, config, onConfigChange }) {
         </>
     );
 }
-DynamicFormRenderer.propTypes = { schema: PropTypes.object, config: PropTypes.object, onConfigChange: PropTypes.func.isRequired };
+DynamicFormRenderer.propTypes = { schema: PropTypes.object, config: PropTypes.object.isRequired, onConfigChange: PropTypes.func.isRequired };
 
-// === ANA BİLEŞEN: NewExperiment ===
-
-function NewExperiment({ onExperimentStarted, onClosePanel }) { 
+function NewExperiment({ onExperimentStarted }) { 
     const [pipelines, setPipelines] = useState([]);
     const [selectedPipelineId, setSelectedPipelineId] = useState('');
     const [currentConfig, setCurrentConfig] = useState(null);
@@ -134,9 +113,7 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
                 if (response.data && response.data.length > 0) {
                     setPipelines(response.data);
                     if (!selectedPipelineId) setSelectedPipelineId(response.data[0].id);
-                } else {
-                  setPipelines([]);
-                }
+                } else { setPipelines([]); }
             } catch (error) { toast.error('Pipeline listesi yüklenemedi.'); } 
             finally { setIsLoading(false); }
         };
@@ -156,9 +133,7 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
         finally { setIsLoading(false); }
     }, []);
 
-    useEffect(() => {
-        loadPipelineData(selectedPipelineId);
-    }, [selectedPipelineId, loadPipelineData]);
+    useEffect(() => { loadPipelineData(selectedPipelineId); }, [selectedPipelineId, loadPipelineData]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -166,9 +141,8 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
         let configToSend = cloneDeep(currentConfig);
         const processNode = (node) => {
             for (const key in node) {
-                if (isObject(node[key]) && !isArray(node[key])) {
-                    processNode(node[key]);
-                } else if (isString(node[key])) {
+                if (isObject(node[key]) && !isArray(node[key])) { processNode(node[key]); } 
+                else if (isString(node[key])) {
                     const nonNumericKeys = ['ticker', 'optimizer', 'target_col', 'target_col_transform'];
                     if (!nonNumericKeys.includes(key)) {
                         const numbers = parseNumberListInput(node[key]);
@@ -185,19 +159,16 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
             const { data } = await startNewExperiment(configToSend); 
             toast.success(data.message || 'Görev başarıyla gönderildi!');
             if (onExperimentStarted) onExperimentStarted();
-        } catch (err) {
-            toast.error('Deney başlatılamadı. Logları kontrol edin.');
-        } finally {
-            setIsSubmitting(false);
-        }
+        } catch (err) { toast.error('Deney başlatılamadı. Logları kontrol edin.'); } 
+        finally { setIsSubmitting(false); }
     };
     
     const selectedPipelineDetails = pipelines.find(p => p.id === selectedPipelineId);
 
     return (
-        <form onSubmit={handleSubmit} className="new-experiment-panel-form"> 
-            <div className="new-experiment-panel-form-content"> 
-                <div className="card">
+        <form onSubmit={handleSubmit} className={styles.form}> 
+            <div className={styles.formContent}> 
+                <div className={`card ${styles.configCard}`}>
                     <div className="form-group">
                         <label htmlFor="pipeline-select">Çalıştırılacak Pipeline Eklentisi</label>
                         <select id="pipeline-select" value={selectedPipelineId} onChange={(e) => setSelectedPipelineId(e.target.value)} disabled={isLoading || isSubmitting}>
@@ -210,7 +181,7 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
                     </div>
                 </div>
                 <div className="card" style={{padding: 0, marginTop: '20px'}}> 
-                    <div onClick={() => loadPipelineData(selectedPipelineId)} style={{borderBottom: '1px solid var(--border-color)', padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-color-darker)'}}>
+                    <div onClick={() => loadPipelineData(selectedPipelineId)} className={styles.resetButton}>
                         <span role="img" aria-label="reset">🔄</span> Varsayılan Konfigürasyona Dön
                     </div>
                     <div style={{padding: '15px'}}>
@@ -219,8 +190,8 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
                     </div>
                 </div>
             </div>
-            <div className="form-action-bar">
-                <div className="pipeline-info">
+            <div className={styles.actionBar}>
+                <div className={styles.pipelineInfo}>
                     <strong>Pipeline:</strong> <span>{selectedPipelineDetails?.name || '...'}</span>
                 </div>
                 <button type="submit" disabled={isLoading || isSubmitting || !currentSchema} className="button-primary">
@@ -230,5 +201,5 @@ function NewExperiment({ onExperimentStarted, onClosePanel }) {
         </form>
     );
 }
-NewExperiment.propTypes = { onExperimentStarted: PropTypes.func.isRequired, onClosePanel: PropTypes.func.isRequired };
+NewExperiment.propTypes = { onExperimentStarted: PropTypes.func.isRequired };
 export default NewExperiment;

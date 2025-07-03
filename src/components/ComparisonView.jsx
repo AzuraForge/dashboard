@@ -1,17 +1,16 @@
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale } from 'chart.js';
-import 'chartjs-adapter-date-fns'; // TimeScale için gerekli
+import 'chartjs-adapter-date-fns';
 import zoomPlugin from 'chartjs-plugin-zoom';
+import styles from './ComparisonView.module.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, zoomPlugin);
 
-// Chart için renk paleti. Her deney için bir renk, sonra gerçek/tahmin için tonlar.
 const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#7e22ce', '#15803d'];
 
 function ComparisonView({ experiments, onClose }) {
 
-  // Ortak ChartJS seçenekleri
   const commonChartOptions = (title, isTimeScale = false) => ({
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false, },
@@ -42,7 +41,6 @@ function ComparisonView({ experiments, onClose }) {
       }
   });
 
-  // Kayıp Grafiği Verisi
   const lossChartData = {
     labels: Array.from({ length: Math.max(...experiments.map(e => e.results?.history?.loss?.length || 0)) }, (_, i) => `E${i + 1}`),
     datasets: experiments.map((exp, i) => ({
@@ -54,67 +52,52 @@ function ComparisonView({ experiments, onClose }) {
     })),
   };
 
-  // Tahmin Grafiği Verisi
   const predictionChartData = {
-      // X ekseni için tüm deneylerin zaman indekslerini birleştireceğiz ve sıralayacağız
-      // Veya her dataset kendi x ekseni değerlerini taşıyabilir (daha basit ve güvenilir)
       datasets: experiments.flatMap((exp, i) => {
           const currentXAxis = exp.results?.time_index || [];
           const currentYTrue = exp.results?.y_true || [];
           const currentYPred = exp.results?.y_pred || [];
-
           const baseColor = chartColors[i % chartColors.length];
-
           return [
               {
                   label: `${exp.pipeline_name} (${exp.config?.data_sourcing?.ticker || 'N/A'}) - Gerçek`,
                   data: currentYTrue.map((val, idx) => ({ x: new Date(currentXAxis[idx]), y: val })),
                   borderColor: baseColor,
                   backgroundColor: `${baseColor}33`,
-                  pointRadius: 0,
-                  fill: false,
-                  tension: 0.1,
+                  pointRadius: 0, fill: false, tension: 0.1,
               },
               {
                   label: `${exp.pipeline_name} (${exp.config?.data_sourcing?.ticker || 'N/A'}) - Tahmin`,
                   data: currentYPred.map((val, idx) => ({ x: new Date(currentXAxis[idx]), y: val })),
-                  borderColor: `color-mix(in srgb, ${baseColor} 50%, #fff)`, // Ana renkten biraz farklı bir ton
-                  borderDash: [5, 5], // Kesikli çizgi
-                  pointRadius: 0,
-                  fill: false,
-                  tension: 0.1,
+                  borderColor: `color-mix(in srgb, ${baseColor} 50%, #fff)`,
+                  borderDash: [5, 5], pointRadius: 0, fill: false, tension: 0.1,
               }
-          ].filter(dataset => dataset.data.length > 0); // Verisi olmayan dataset'leri filtrele
+          ].filter(dataset => dataset.data.length > 0);
       })
   };
 
-
   return (
-    <div className="comparison-modal-overlay" onClick={onClose}>
-      <div className="comparison-modal-content" onClick={e => e.stopPropagation()}>
-        <div className="comparison-header">
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <div className={styles.header}>
           <h2>Deney Karşılaştırması ({experiments.length} adet)</h2>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
-        <div className="comparison-body">
-          {/* Kayıp Grafiği */}
+        <div className={styles.body}>
           {lossChartData.datasets.some(ds => ds.data.length > 0) && (
-            <div className="comparison-chart-container">
+            <div className={styles.chartContainer}>
               <Line data={lossChartData} options={commonChartOptions('Eğitim Kaybı Karşılaştırması')} />
               <p className="chart-instructions">Yakınlaştırmak için fare tekerleğini kullanın. Sıfırlamak için çift tıklayın. Kaydırmak için <strong>Alt + Sürükle</strong>.</p>
             </div>
           )}
-
-          {/* Tahmin Grafiği */}
           {predictionChartData.datasets.some(ds => ds.data.length > 0) && (
-            <div className="comparison-chart-container">
+            <div className={styles.chartContainer}>
               <Line data={predictionChartData} options={commonChartOptions('Tahmin Performansı Karşılaştırması', true)} />
               <p className="chart-instructions">Yakınlaştırmak için fare tekerleğini kullanın. Sıfırlamak için çift tıklayın. Kaydırmak için <strong>Alt + Sürükle</strong>.</p>
             </div>
           )}
-
           <h4 className="section-title" style={{ marginTop: 0 }}>Özet Tablosu</h4>
-          <div className="table-container">
+          <div className={`table-container ${styles.summaryTableContainer}`}>
             <table>
               <thead><tr><th>Deney ID</th><th>Pipeline</th><th>Sembol</th><th>Epochs</th><th>LR</th><th>Final Kayıp</th><th>R² Skoru</th><th>MAE</th></tr></thead>
               <tbody>
@@ -138,5 +121,10 @@ function ComparisonView({ experiments, onClose }) {
     </div>
   );
 }
-ComparisonView.propTypes = { experiments: PropTypes.array.isRequired, onClose: PropTypes.func.isRequired, };
+
+ComparisonView.propTypes = {
+  experiments: PropTypes.array.isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
 export default ComparisonView;
