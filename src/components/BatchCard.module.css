@@ -1,0 +1,86 @@
+.batchContainer {
+  background-color: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  margin-bottom: 25px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.2s ease-in-out;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid transparent; /* Varsayılan olarak görünmez */
+  transition: border-color 0.2s ease;
+}
+
+:global(.expanded) .header { /* isExpanded durumunda border'ı göster */
+  border-color: var(--border-color);
+}
+
+.header:hover {
+  background-color: var(--hover-bg);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.icon {
+  color: var(--text-color-darker);
+  transition: transform 0.2s ease-in-out;
+}
+
+.icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+}
+
+.batchName {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-color);
+}
+
+.batchMeta {
+  font-size: 0.85em;
+  color: var(--text-color-darker);
+  font-family: var(--font-mono);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+}
+
+.statusBadge {
+  padding: 5px 15px;
+  border-radius: 9999px;
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-inverse);
+}
+
+.running { background-color: var(--info-color); }
+.success { background-color: var(--success-color); }
+.failure { background-color: var(--error-color); }
+.pending { background-color: var(--text-color-darker); }
+.mixed { background-color: var(--warning-color); }
+
+.experimentsList {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
