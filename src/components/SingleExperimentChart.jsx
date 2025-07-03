@@ -1,6 +1,6 @@
 // dashboard/src/components/SingleExperimentChart.jsx
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useContext } from 'react'; // useContext eklendi
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
 import { 
@@ -9,16 +9,18 @@ import {
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import zoomPlugin from 'chartjs-plugin-zoom';
-import { getCssVar } from '../utils/cssUtils';
+import { ThemeContext } from '../context/ThemeContext'; // ThemeContext import edildi
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale, zoomPlugin);
 
+// getCssVar fonksiyonuna artık gerek yok. Renkleri doğrudan alacağız.
 const getChartOptions = (title, chartColors, isTimeScale, enableZoom, compactMode) => {
-  const options = {
+    // ... (bu fonksiyonun içeriği aynı kalıyor, değişiklik yok)
+    const options = {
     responsive: true,
     maintainAspectRatio: false,
     animation: {
-      duration: isTimeScale ? 0 : 300, // Canlı tahmin grafiğinde animasyonu kapat
+      duration: isTimeScale ? 0 : 300, 
       easing: 'linear'
     },
     plugins: {
@@ -65,15 +67,22 @@ const getChartOptions = (title, chartColors, isTimeScale, enableZoom, compactMod
 
 function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
   const chartRef = useRef(null);
-  const chartColors = useMemo(() => ({
-    primary: getCssVar('--primary-color'),
-    info: getCssVar('--info-color'),
-    error: getCssVar('--error-color'),
-    border: getCssVar('--border-color'),
-    textColor: getCssVar('--text-color'),
-    textColorDarker: getCssVar('--text-color-darker'),
-    contentBg: getCssVar('--content-bg'),
-  }), []);
+  const { theme } = useContext(ThemeContext); // Temayı context'ten al
+
+  // DÜZELTME: Renkleri tema durumuna göre dinamik olarak belirliyoruz
+  const chartColors = useMemo(() => {
+    const isLightTheme = theme === 'light';
+    return {
+      primary: '#42b983',
+      info: '#3b82f6',
+      error: '#ef4444',
+      border: isLightTheme ? '#e2e8f0' : '#334155',
+      textColor: isLightTheme ? '#1e293b' : '#e2e8f0',
+      textColorDarker: isLightTheme ? '#475569' : '#94a3b8',
+      contentBg: isLightTheme ? '#ffffff' : '#1e293b',
+    };
+  }, [theme]);
+
 
   const chartData = useMemo(() => {
     if (chartType === 'loss') {
@@ -82,7 +91,7 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
         labels: lossHistory.map((_, i) => `E${i + 1}`),
         datasets: [{
           label: 'Kayıp', data: lossHistory, borderColor: chartColors.primary,
-          backgroundColor: `color-mix(in srgb, ${chartColors.primary} 20%, transparent)`,
+          backgroundColor: `${chartColors.primary}33`, // Opacity için hex'e 33 ekliyoruz
           tension: 0.4, borderWidth: 2, pointRadius: 0, fill: 'origin',
         }]
       };
@@ -105,7 +114,7 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
   const hasData = (chartType === 'loss' && data?.loss?.length > 0) || (chartType === 'prediction' && data?.time_index?.length > 0);
 
   return (
-    <div className="single-chart-container">
+    <div className="single-chart-container" style={{ position: 'relative', height: '100%', width: '100%' }}>
       {hasData ? (
         <Line
           ref={chartRef}
@@ -113,9 +122,9 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
           options={getChartOptions(chartTitle, chartColors, chartType === 'prediction', enableZoom, true)}
         />
       ) : (
-        <div className="no-chart-data-message">{isLive ? 'Canlı veri bekleniyor...' : 'Veri mevcut değil.'}</div>
+        <div className="no-chart-data-message" style={{ /* ... stiller ... */ }}>{isLive ? 'Canlı veri bekleniyor...' : 'Veri mevcut değil.'}</div>
       )}
-      {enableZoom && hasData && <p className="chart-instructions">Yakınlaştır/Sıfırla: Fare tekerleği/Çift tıkla, Kaydır: Alt + Sürükle</p>}
+      {enableZoom && hasData && <p className="chart-instructions" style={{ /* ... stiller ... */ }}>Yakınlaştır/Sıfırla: Fare tekerleği/Çift tıkla, Kaydır: Alt + Sürükle</p>}
     </div>
   );
 }
