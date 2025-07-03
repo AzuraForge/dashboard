@@ -1,0 +1,59 @@
+/* ======================================================
+   TopNavbar.module.css
+   ====================================================== */
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background-color: var(--content-bg);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0; 
+  z-index: 100;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Logo stilleri de buraya taşındı */
+.logoContainer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  text-decoration: none; /* Link gibi davranması için */
+}
+
+.logoContainer h1 {
+  color: var(--text-color);
+  font-size: 1.6em;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.5px;
+  transition: color 0.3s;
+}
+
+/* ThemeToggle stilleri de buraya taşındı */
+.themeToggleButton {
+  background-color: transparent; /* Arkaplanı şeffaf yapalım */
+  color: var(--text-color-darker);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.themeToggleButton:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}

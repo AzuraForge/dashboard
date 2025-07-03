@@ -55,22 +55,7 @@ body {
 /* ==========================================================================
    4. LOGO VE TEMA DEĞİŞTİRME 
    ========================================================================== */
-.logo-container {
-  display: flex; align-items: center; justify-content: flex-start; gap: 12px;
-  margin-bottom: 0; 
-  padding: 0; 
-}
-.logo-container h1 {
-  color: var(--text-color); font-size: 1.6em; font-weight: 600; margin: 0;
-  letter-spacing: 0.5px; transition: color 0.3s;
-}
-.theme-toggle-button {
-  background-color: var(--bg-color); color: var(--text-color-darker); border: 1px solid var(--border-color);
-  border-radius: 8px; padding: 8px; cursor: pointer; display: flex; align-items: center;
-  justify-content: center; margin-top: 0; 
-  transition: all 0.2s ease;
-}
-.theme-toggle-button:hover { border-color: var(--primary-color); color: var(--primary-color); }
+
 /* ==========================================================================
    5. BİLEŞENLER (Components)
    ========================================================================== */

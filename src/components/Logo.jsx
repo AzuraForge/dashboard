@@ -1,8 +1,10 @@
 import PropTypes from 'prop-types';
+import { Link } from 'react-router-dom';
+import styles from './TopNavbar.module.css'; // TopNavbar stilini kullanır
 
 function Logo({ size = 36 }) {
   return (
-    <div className="logo-container">
+    <Link to="/" className={styles.logoContainer}>
       <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
         <defs>
           <linearGradient id="azura-stream-gradient-component" x1="15" y1="50" x2="85" y2="50" gradientUnits="userSpaceOnUse">
@@ -14,7 +16,7 @@ function Logo({ size = 36 }) {
         <path d="M15 55 C 35 45, 65 45, 85 55" stroke="url(#azura-stream-gradient-component)" strokeWidth="8" strokeLinecap="round" fill="none"/>
       </svg>
       <h1>AzuraForge</h1>
-    </div>
+    </Link>
   );
 }
 Logo.propTypes = { size: PropTypes.number, };
