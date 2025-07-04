@@ -44,6 +44,20 @@
   font-size: 1.5em;
 }
 
+.closeButton {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    line-height: 1;
+    color: var(--text-color-darker);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+.closeButton:hover {
+    color: var(--text-color);
+}
+
 .body {
   padding: 30px;
   flex-grow: 1;
@@ -60,6 +74,53 @@
   position: relative;
 }
 
+.sectionTitle {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
 .summaryTableContainer {
   /* Genel .table-container stillerini devralır. */
+  padding: 0; /* İç padding'i kaldırıyoruz, tablo kendi yönetecek */
+}
+
+.summaryTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summaryTable th,
+.summaryTable td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.summaryTable th {
+  color: var(--text-color-darker);
+  font-size: 0.85em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summaryTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.summaryTable tbody tr:hover {
+  background-color: var(--hover-bg);
+}
+
+.summaryTable td {
+  font-size: 0.95em;
+  font-family: var(--font-mono);
+}
+
+.summaryTable td:not(:first-child) {
+    text-align: right;
 }

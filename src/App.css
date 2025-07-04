@@ -1,8 +1,5 @@
 /* ==========================================================================
    AzuraForge Dashboard - Global Stil Dosyası
-   Bu dosya SADECE tüm uygulamayı etkileyen global kuralları,
-   tasarım değişkenlerini ve temel yardımcı sınıfları içerir.
-   Bileşene özel stiller, kendi .module.css dosyalarında yer almalıdır.
    ========================================================================== */
 
 /* ==========================================================================
@@ -19,8 +16,8 @@
   --info-color: #3b82f6;
 
   /* Koyu Tema (Varsayılan) */
-  --text-color: #e2e8f0;
-  --text-color-darker: #94a3b8;
+  --text-color: #f1f5f9; /* Daha parlak (slate-100) */
+  --text-color-darker: #cbd5e1; /* Daha parlak (slate-300) */
   --text-inverse: #ffffff;
   --bg-color: #0f172a;
   --content-bg: #1e293b;
