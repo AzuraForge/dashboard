@@ -1,70 +1,54 @@
-/* ======================================================
-   NewExperiment.module.css
-   ====================================================== */
+/* NewExperiment.module.css */
 
 .form {
   display: flex;
   flex-direction: column;
-  height: 100%; 
+  gap: 1.5rem;
+  height: 100%;
 }
 
-.formContent {
-  flex-grow: 1; 
-  overflow-y: auto; 
-  /* Panelin kendi padding'i olduğu için burayı 0 yapıyoruz */
-  padding: 0; 
-}
-
-.actionBar {
-  flex-shrink: 0; 
-  padding: 15px 25px;
-  background-color: var(--bg-color);
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: background-color 0.3s, border-color 0.3s;
-}
-
-.pipelineInfo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-color-darker);
-}
-.pipelineInfo strong {
-  color: var(--text-color);
+.helpText {
+    font-size: 0.8em;
+    color: var(--text-color-darker);
+    margin-top: 5px;
+    display: block;
 }
 
 .collapsibleFieldset {
-  border: 1px solid transparent; /* Varsayılan border'ı kaldır */
+  border: none;
   border-radius: 8px;
   padding: 0;
-  margin: 0 0 20px 0;
-  background-color: var(--content-bg);
-  overflow: hidden; /* Radius'un çalışması için */
+  margin: 0 0 1rem 0;
+  background-color: var(--bg-color);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
 }
 
 .collapsibleHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 1rem 1.25rem;
   cursor: pointer;
   font-weight: 600;
   color: var(--text-color);
   transition: background-color 0.2s ease;
 }
 
+.collapsibleHeader .icon {
+  transition: transform 0.2s ease;
+  color: var(--text-color-darker);
+}
+
 .collapsibleHeader:hover {
   background-color: var(--hover-bg);
 }
 
-.collapsibleHeader .icon {
-  transition: transform 0.2s ease;
+.expanded .collapsibleHeader .icon {
+  transform: rotate(0deg);
 }
 
-.collapsibleHeader.collapsed .icon {
+.collapsibleFieldset:not(.expanded) .collapsibleHeader .icon {
   transform: rotate(-90deg);
 }
 
@@ -72,23 +56,22 @@
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease-out, padding 0.3s ease-out;
-  padding: 0 20px;
-  border-top: 1px solid var(--border-color);
+  padding: 0 1.25rem;
 }
 
 .expanded .collapsibleContent {
-  max-height: 1000px; 
-  transition: max-height 0.3s ease-in, padding 0.3s ease-in;
-  padding: 20px;
+  max-height: 1500px; 
+  transition: max-height 0.5s ease-in, padding 0.3s ease-in;
+  padding: 1.25rem;
+  border-top: 1px solid var(--border-color);
 }
 
 .configCard {
-  margin-bottom: 25px;
+  margin-bottom: 0; /* Artık gap ile yönetiliyor */
 }
 
 .resetButton {
-  border-top: 1px solid var(--border-color); 
-  padding: 10px 15px; 
+  padding: 0.5rem 1rem; 
   cursor: pointer; 
   display: flex; 
   align-items: center; 
@@ -96,8 +79,27 @@
   gap: 8px; 
   color: var(--text-color-darker);
   transition: background-color 0.2s ease, color 0.2s ease;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  width: fit-content;
 }
+
 .resetButton:hover {
   background-color: var(--hover-bg);
   color: var(--primary-color);
+  border-color: var(--border-color);
+}
+
+.submitContainer {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.submitContainer .button-primary {
+    font-size: 1.1em;
+    padding: 0.8rem 1.5rem;
 }

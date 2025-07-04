@@ -53,7 +53,7 @@ function DynamicFormField({ field, config, onConfigChange }) {
         <div className="form-group">
             <label htmlFor={id}>{label}</label>
             {renderField()}
-            {help_text && <small>{help_text}</small>}
+            {help_text && <small className={styles.helpText}>{help_text}</small>}
         </div>
     );
 }
@@ -64,7 +64,10 @@ function DynamicFormRenderer({ schema, config, onConfigChange }) {
 
     useEffect(() => {
         if (schema?.groups?.length > 0) {
-            const initialExpandedState = { [schema.groups[0].id]: true };
+            const initialExpandedState = schema.groups.reduce((acc, group, index) => {
+                acc[group.id] = index === 0; // İlk grubu açık başlat
+                return acc;
+            }, {});
             setExpandedSections(initialExpandedState);
         }
     }, [schema]);
@@ -81,7 +84,7 @@ function DynamicFormRenderer({ schema, config, onConfigChange }) {
         <>
             {schema.groups.map(group => (
                 <fieldset key={group.id} className={`${styles.collapsibleFieldset} ${expandedSections[group.id] ? styles.expanded : ''}`}>
-                    <div className={`${styles.collapsibleHeader} ${!expandedSections[group.id] ? styles.collapsed : ''}`} onClick={() => toggleSection(group.id)}>
+                    <div className={styles.collapsibleHeader} onClick={() => toggleSection(group.id)}>
                         <span>{group.name}</span>
                         <ChevronDownIcon className={styles.icon} />
                     </div>
@@ -97,7 +100,8 @@ function DynamicFormRenderer({ schema, config, onConfigChange }) {
 }
 DynamicFormRenderer.propTypes = { schema: PropTypes.object, config: PropTypes.object.isRequired, onConfigChange: PropTypes.func.isRequired };
 
-function NewExperiment({ onExperimentStarted }) { 
+// Artık onClosePanel prop'una ihtiyacımız yok.
+function NewExperimentFormContent({ onExperimentStarted }) { 
     const [pipelines, setPipelines] = useState([]);
     const [selectedPipelineId, setSelectedPipelineId] = useState('');
     const [currentConfig, setCurrentConfig] = useState(null);
@@ -164,43 +168,38 @@ function NewExperiment({ onExperimentStarted }) {
         finally { setIsSubmitting(false); }
     };
     
-    const selectedPipelineDetails = pipelines.find(p => p.id === selectedPipelineId);
-
     return (
-        <form onSubmit={handleSubmit} className={styles.form}> 
-            <div className={styles.formContent}> 
-                <div className={`card ${styles.configCard}`}>
-                    <div className="form-group">
-                        <label htmlFor="pipeline-select">Çalıştırılacak Pipeline Eklentisi</label>
-                        <select id="pipeline-select" value={selectedPipelineId} onChange={(e) => setSelectedPipelineId(e.target.value)} disabled={isLoading || isSubmitting}>
-                            {pipelines.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="batch-name">Deney Grubu Adı (İsteğe Bağlı)</label>
-                        <input type="text" id="batch-name" value={batchName} onChange={(e) => setBatchName(e.target.value)} placeholder="Örn: LR ve Epoch Optimizasyonu" disabled={isLoading || isSubmitting} />
-                    </div>
+        <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={`card ${styles.configCard}`}>
+                <div className="form-group">
+                    <label htmlFor="pipeline-select">Çalıştırılacak Pipeline Eklentisi</label>
+                    <select id="pipeline-select" value={selectedPipelineId} onChange={(e) => setSelectedPipelineId(e.target.value)} disabled={isLoading || isSubmitting}>
+                        {pipelines.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
+                    </select>
                 </div>
-                <div className="card" style={{padding: 0, marginTop: '20px'}}> 
-                    <div onClick={() => loadPipelineData(selectedPipelineId)} className={styles.resetButton}>
-                        <span role="img" aria-label="reset">🔄</span> Varsayılan Konfigürasyona Dön
-                    </div>
-                    <div style={{padding: '15px'}}>
-                        <h3>Deney Parametreleri</h3>
-                        {isLoading ? <p>Yükleniyor...</p> : <DynamicFormRenderer schema={currentSchema} config={currentConfig} onConfigChange={setCurrentConfig} />}
-                    </div>
+                <div className="form-group">
+                    <label htmlFor="batch-name">Deney Grubu Adı (İsteğe Bağlı)</label>
+                    <input type="text" id="batch-name" value={batchName} onChange={(e) => setBatchName(e.target.value)} placeholder="Örn: LR ve Epoch Optimizasyonu" disabled={isLoading || isSubmitting} />
                 </div>
             </div>
-            <div className={styles.actionBar}>
-                <div className={styles.pipelineInfo}>
-                    <strong>Pipeline:</strong> <span>{selectedPipelineDetails?.name || '...'}</span>
+            <div className="card" style={{padding: '1rem', marginTop: '20px'}}> 
+                <div onClick={() => loadPipelineData(selectedPipelineId)} className={styles.resetButton} title="Mevcut ayarları sıfırla">
+                    <span role="img" aria-label="reset">🔄</span> Varsayılan Konfigürasyona Dön
                 </div>
+                <div style={{padding: '15px 0 0 0'}}>
+                    <h3>Deney Parametreleri</h3>
+                    {isLoading ? <p>Yükleniyor...</p> : <DynamicFormRenderer schema={currentSchema} config={currentConfig} onConfigChange={setCurrentConfig} />}
+                </div>
+            </div>
+            
+            {/* ActionBar yerine doğrudan formun sonuna buton ekliyoruz */}
+            <div className={styles.submitContainer}>
                 <button type="submit" disabled={isLoading || isSubmitting || !currentSchema} className="button-primary">
-                    {isSubmitting ? 'Başlatılıyor...' : 'Eğitimi Başlat'}
+                    {isSubmitting ? 'Başlatılıyor...' : '🚀 Eğitimi Başlat'}
                 </button>
             </div>
         </form>
     );
 }
-NewExperiment.propTypes = { onExperimentStarted: PropTypes.func.isRequired };
-export default NewExperiment;
+NewExperimentFormContent.propTypes = { onExperimentStarted: PropTypes.func.isRequired };
+export default NewExperimentFormContent;

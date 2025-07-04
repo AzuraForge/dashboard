@@ -2,8 +2,9 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-// NewExperiment artık sadece form içeriği, sayfa başlığı kaldırıldı
-import NewExperimentFormContent from '../pages/NewExperiment'; 
+import NewExperimentFormContent from '../pages/NewExperiment';
+// YENİ: CSS Modülü yerine standart CSS importu
+import './NewExperimentPanel.css'; 
 
 function CloseIcon() {
   return (
@@ -18,37 +19,53 @@ function NewExperimentPanel({ isOpen, onClose, onExperimentStarted }) {
   const panelRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (isOpen && panelRef.current) {
-      // Panelin içeriğine veya ilk inputa focus vermek için
-      panelRef.current.focus(); 
-    }
-  }, [isOpen]);
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
 
-  // Overlay'e tıklanınca paneli kapatma (event propagation'ı durdurmak için)
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      // Panelin içeriğine focus vermek için
+      setTimeout(() => panelRef.current?.focus(), 50);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
+  // isOpen durumuna göre class'ları dinamik olarak ata
+  const overlayClasses = `panel-overlay ${isOpen ? 'open' : ''}`;
+  const panelClasses = `panel ${isOpen ? 'open' : ''}`;
+
   return (
-    <div className={`new-experiment-panel-overlay ${isOpen ? 'open' : ''}`} onClick={handleOverlayClick}>
+    <div className={overlayClasses} onClick={handleOverlayClick}>
       <div 
         ref={panelRef} 
-        className={`new-experiment-panel ${isOpen ? 'open' : ''}`}
-        onKeyDown={(e) => e.key === 'Escape' && onClose()}
+        className={panelClasses}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-experiment-title"
         tabIndex="-1" 
       >
-        <div className="new-experiment-panel-header">
-          <h2>Yeni Deney Başlat</h2>
-          <button className="close-button" onClick={onClose} title="Kapat">
+        <div className="panel-header">
+          <h2 id="new-experiment-title">Yeni Deney Başlat</h2>
+          <button className="close-button" onClick={onClose} title="Kapat (Esc)">
             <CloseIcon />
           </button>
         </div>
-        <div className="new-experiment-panel-body">
+        <div className="panel-body">
+          {/* Form içeriği artık bir prop alarak panelin kapandığını bilecek */}
           <NewExperimentFormContent 
             onExperimentStarted={onExperimentStarted} 
-            onClosePanel={onClose} 
           />
         </div>
       </div>
