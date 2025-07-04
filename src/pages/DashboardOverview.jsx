@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ExperimentCard from '../components/ExperimentCard';
 import BatchCard from '../components/BatchCard';
 import ComparisonView from '../components/ComparisonView';
+import ReportModal from '../components/ReportModal'; // Yeni import
 import { fetchExperiments } from '../services/api';
 import { toast } from 'react-toastify';
 
@@ -9,11 +10,10 @@ function DashboardOverview() {
   const [experiments, setExperiments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
   const [searchTerm, setSearchTerm] = useState('');
-  
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
   const [isComparisonModalOpen, setIsComparisonModalOpen] = useState(false);
+  const [viewingReportId, setViewingReportId] = useState(null); // Yeni state
 
   const getExperiments = useCallback(async (showLoadingIndicator = false) => {
     if (showLoadingIndicator) setLoading(true);
@@ -47,7 +47,6 @@ function DashboardOverview() {
 
     const batches = {};
     const singleExperiments = [];
-
     filtered.forEach(exp => {
       const experimentWithSelection = { ...exp, isSelected: selectedForComparison.has(exp.experiment_id) };
       if (exp.batch_id) {
@@ -55,17 +54,10 @@ function DashboardOverview() {
           batches[exp.batch_id] = { batch_id: exp.batch_id, batch_name: exp.batch_name, experiments: [] };
         }
         batches[exp.batch_id].experiments.push(experimentWithSelection);
-      } else {
-        singleExperiments.push(experimentWithSelection);
-      }
+      } else { singleExperiments.push(experimentWithSelection); }
     });
-
-    Object.values(batches).forEach(batch => {
-      batch.experiments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    });
-
-    const sortedBatches = Object.values(batches).sort((a,b) => new Date(b.experiments[0].created_at) - new Date(a.experiments[0].created_at));
-
+    Object.values(batches).forEach(batch => batch.experiments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+    const sortedBatches = Object.values(batches).sort((a,b) => new Date(b.experiments[0].created_at) - new Date(a.created_at));
     return [...sortedBatches, ...singleExperiments];
   }, [experiments, searchTerm, selectedForComparison]);
   
@@ -77,15 +69,10 @@ function DashboardOverview() {
     });
   }, []);
 
-  const comparisonData = useMemo(() => {
-    return experiments.filter(exp => selectedForComparison.has(exp.experiment_id));
-  }, [selectedForComparison, experiments]);
+  const comparisonData = useMemo(() => experiments.filter(exp => selectedForComparison.has(exp.experiment_id)), [selectedForComparison, experiments]);
 
   const handleStartComparison = useCallback(() => { 
-    if (comparisonData.length < 2) {
-        toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.');
-        return;
-    }
+    if (comparisonData.length < 2) { toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.'); return; }
     setIsComparisonModalOpen(true);
   }, [comparisonData]);
 
@@ -103,6 +90,14 @@ function DashboardOverview() {
         />
       )}
       
+      {/* Yeni Rapor Modalı */}
+      {viewingReportId && (
+          <ReportModal
+              experimentId={viewingReportId}
+              onClose={() => setViewingReportId(null)}
+          />
+      )}
+      
       <div className="page-header">
         <h1>Deney Paneli</h1>
         <p>Tüm deneylerinizi tek bir yerden yönetin, takip edin ve karşılaştırın.</p>
@@ -113,11 +108,7 @@ function DashboardOverview() {
             <label htmlFor="search-term">Arama</label>
             <input type="text" id="search-term" placeholder="ID, Pipeline, Sembol, Grup ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{minWidth: '250px'}} />
         </div>
-        <button 
-          className="button-primary" 
-          onClick={handleStartComparison} 
-          disabled={selectedForComparison.size < 2}
-        >
+        <button className="button-primary" onClick={handleStartComparison} disabled={selectedForComparison.size < 2}>
           Seçilenleri Karşılaştır ({selectedForComparison.size})
         </button>
       </div>
@@ -128,8 +119,8 @@ function DashboardOverview() {
         ) : (
           groupedAndFilteredExperiments.map((item) => (
             item.batch_id 
-              ? <BatchCard key={item.batch_id} batch={item} onSelect={handleComparisonSelect} />
-              : <ExperimentCard key={item.experiment_id} experiment={item} isSelected={item.isSelected} onSelect={() => handleComparisonSelect(item.experiment_id)} />
+              ? <BatchCard key={item.batch_id} batch={item} onSelect={handleComparisonSelect} onShowReport={setViewingReportId} />
+              : <ExperimentCard key={item.experiment_id} experiment={item} isSelected={item.isSelected} onSelect={() => handleComparisonSelect(item.experiment_id)} onShowReport={setViewingReportId}/>
           ))
         )}
       </div>
