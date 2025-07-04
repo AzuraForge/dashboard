@@ -26,14 +26,17 @@ function ReportModal({ experimentId, onClose }) {
     loadReport();
   }, [experimentId]);
 
-  // Markdown içindeki göreceli imaj yollarını (örn: images/loss.png)
-  // tam API yoluna dönüştürür.
-  const transformImageUri = (uri) => {
-    if (uri.startsWith('images/')) {
-      return `${API_BASE_URL}/experiments/${experimentId}/report/${uri}`;
+  // === DEĞİŞİKLİK BAŞLANGICI: transformImageUri -> urlTransform ===
+  // urlTransform fonksiyonu, her URL için çağrılır ve yeni URL'i döndürmelidir.
+  const urlTransform = (url) => {
+    // Eğer URL göreceli bir imaj yolu ise, onu tam API yoluna çevir.
+    if (url.startsWith('images/')) {
+      return `${API_BASE_URL}/experiments/${experimentId}/report/${url}`;
     }
-    return uri;
+    // Diğer tüm URL'leri olduğu gibi bırak.
+    return url;
   };
+  // === DEĞİŞİKLİK SONU ===
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -49,9 +52,10 @@ function ReportModal({ experimentId, onClose }) {
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              transformImageUri={transformImageUri}
+              // === DEĞİŞİKLİK: prop adı güncellendi ===
+              urlTransform={urlTransform}
               components={{
-                h1: ({node, ...props}) => <h2 {...props} />, // H1'leri H2'ye çevirerek daha iyi bir hiyerarşi sağlıyoruz
+                h1: ({node, ...props}) => <h2 {...props} />,
                 table: ({node, ...props}) => <div className="table-container"><table {...props} /></div>
               }}
             >
