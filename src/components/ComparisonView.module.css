@@ -4,116 +4,67 @@
 
 /* 1. Modal Ana Yerleşimi */
 .modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background-color: color-mix(in srgb, var(--bg-color) 85%, transparent);
   backdrop-filter: blur(8px);
   z-index: 5000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   padding: 2rem;
-  opacity: 0;
-  animation: fadeIn 0.3s ease forwards;
+  opacity: 0; animation: fadeIn 0.3s ease forwards;
 }
 
-@keyframes fadeIn {
-  to { opacity: 1; }
-}
+@keyframes fadeIn { to { opacity: 1; } }
 
 .modalContent {
   background-color: var(--content-bg);
   border: 1px solid var(--border-color);
   border-radius: 16px;
-  width: 100%;
-  max-width: 1400px;
-  height: 95vh;
+  width: 100%; max-width: 1400px; height: 95vh;
   box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
   overflow: hidden;
-  transform: scale(0.95);
-  animation: popIn 0.3s ease 0.1s forwards;
+  transform: scale(0.95); animation: popIn 0.3s ease 0.1s forwards;
 }
 
-@keyframes popIn {
-  to { transform: scale(1); }
-}
+@keyframes popIn { to { transform: scale(1); } }
 
 /* 2. Modal Başlık ve Gövde Yapısı */
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex; justify-content: space-between; align-items: center;
   padding: 20px 30px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
-.header h2 {
-  margin: 0;
-  font-size: 1.5em;
-  color: var(--text-color);
-}
+.header h2 { margin: 0; font-size: 1.5em; color: var(--text-color); }
 
 .closeButton {
-  background: none;
-  border: none;
-  font-size: 1.8rem;
-  line-height: 1;
-  color: var(--text-color-darker);
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s ease;
+  background: none; border: none; font-size: 1.8rem; line-height: 1;
+  color: var(--text-color-darker); cursor: pointer; padding: 0; transition: color 0.2s ease;
 }
 
-.closeButton:hover {
-  color: var(--text-color);
-}
+.closeButton:hover { color: var(--text-color); }
 
 .body {
-  padding: 30px;
-  flex-grow: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
+  padding: 30px; flex-grow: 1; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 30px;
 }
 
 /* 3. Modal İçeriği (Grafik ve Başlık) */
-.chartContainer {
-  height: 400px;
-  min-height: 300px;
-  width: 100%;
-  position: relative;
-}
+.chartContainer { height: 400px; min-height: 300px; width: 100%; position: relative; }
 
 .sectionTitle {
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
+  margin-top: 2rem; margin-bottom: 1rem; font-size: 1.2rem; font-weight: 600;
+  padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);
   color: var(--text-color);
 }
 
 /* 4. Özet Tablosu Stilleri */
-.summaryTableContainer {
-  padding: 0;
-  overflow-x: auto;
-}
+.summaryTableContainer { padding: 0; overflow-x: auto; }
 
-.summaryTable {
-  width: 100%;
-  border-collapse: collapse;
-}
+.summaryTable { width: 100%; border-collapse: collapse; }
 
-.summaryTable th,
-.summaryTable td {
+.summaryTable th, .summaryTable td {
   padding: 12px 18px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
@@ -122,28 +73,20 @@
 }
 
 .summaryTable th {
-  color: var(--text-color-darker);
-  font-size: 0.85em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  position: sticky;
-  top: 0;
+  color: var(--text-color-darker); font-size: 0.85em; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  position: sticky; top: 0;
   background-color: var(--content-bg);
 }
 
-.summaryTable tbody tr:last-child td {
-  border-bottom: none;
-}
+.summaryTable tbody tr:last-child td { border-bottom: none; }
 
-.summaryTable tbody tr:hover {
-  background-color: var(--hover-bg);
-}
+.summaryTable tbody tr:hover { background-color: var(--hover-bg); }
 
-.summaryTable td {
-  font-size: 0.95em;
-  font-family: var(--font-mono);
-  color: var(--text-color);
+.summaryTable td { font-size: 0.95em; font-family: var(--font-mono); color: var(--text-color); }
+
+.idCellHeader, .idCell {
+  text-align: left;
 }
 
 .idCell {
@@ -153,37 +96,26 @@
 }
 
 /* 5. Hizalama ve Vurgulama Stilleri */
-.numericHeader {
-  text-align: right;
-}
-
-.numericCell {
-  text-align: right;
-}
+.numericHeader { text-align: right; }
+.numericCell { text-align: right; }
 
 .bestMetric, .worstMetric {
   font-weight: 700 !important;
-  border-radius: 6px;
-  padding: 6px 12px;
-  display: inline-block;
+  /* Arka plan rengi ve border kaldırıldı, sadece metin rengi değişecek */
 }
 
 .bestMetric {
-  background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
   color: var(--success-color);
-  border: 1px solid color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 .worstMetric {
-  background-color: color-mix(in srgb, var(--error-color) 15%, transparent);
   color: var(--error-color);
-  border: 1px solid color-mix(in srgb, var(--error-color) 40%, transparent);
 }
 
-/* Açık temada okunabilirlik için özel renkler */
 .light-theme .bestMetric {
-  color: #14532d; /* Koyu Yeşil */
+  color: #166534; /* Açık temada okunabilirlik için daha koyu yeşil */
 }
+
 .light-theme .worstMetric {
-  color: #991b1b; /* Koyu Kırmızı */
+  color: #991b1b; /* Açık temada okunabilirlik için daha koyu kırmızı */
 }

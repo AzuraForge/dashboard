@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
@@ -6,6 +6,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import 'chartjs-adapter-date-fns';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import styles from './ComparisonView.module.css';
+import { ThemeContext } from '../context/ThemeContext'; // ThemeContext'i import et
 
 // Chart.js eklentilerini doğru şekilde kaydet
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, Filler, zoomPlugin);
@@ -29,6 +30,7 @@ const analyzeMetrics = (experiments, metricPath, mode = 'min') => {
 };
 
 function ComparisonView({ experiments, title, onClose }) {
+  const { theme } = useContext(ThemeContext); // Mevcut temayı context'ten al
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -57,19 +59,26 @@ function ComparisonView({ experiments, title, onClose }) {
     return `...${exp.experiment_id.slice(-12)} (${params.join(', ')})`;
   };
 
-  const commonChartOptions = useMemo(() => (chartTitle) => ({
+  const commonChartOptions = useMemo(() => {
+    const isDark = theme === 'dark';
+    const textColor = isDark ? '#f1f5f9' : '#1e293b';
+    const textColorDarker = isDark ? '#94a3b8' : '#475569';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const tooltipBg = isDark ? '#1e293b' : '#ffffff';
+
+    return (chartTitle) => ({
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: { 
-        legend: { position: 'top', labels: { color: 'var(--text-color)', font: { size: 12 }, boxWidth: 15, padding: 20 } },
-        title: { display: true, text: chartTitle, font: { size: 16, weight: 'bold' }, color: 'var(--text-color)' },
+        legend: { position: 'top', labels: { color: textColor, font: { size: 12 }, boxWidth: 15, padding: 20 } },
+        title: { display: true, text: chartTitle, font: { size: 16, weight: 'bold' }, color: textColor },
         tooltip: { 
-          backgroundColor: 'var(--content-bg)', 
-          borderColor: 'var(--border-color)', 
+          backgroundColor: tooltipBg, 
+          borderColor: gridColor, 
           borderWidth: 1, 
-          titleColor: 'var(--text-color)', 
-          bodyColor: 'var(--text-color)',
+          titleColor: textColor, 
+          bodyColor: textColor,
           bodyFont: { family: 'var(--font-mono)'},
           titleFont: { family: 'var(--font-sans)'},
           boxPadding: 8,
@@ -79,18 +88,19 @@ function ComparisonView({ experiments, title, onClose }) {
       },
       scales: {
           y: { 
-              title: { display: true, text: 'Kayıp Değeri (Loss)', font: { size: 12 }, color: 'var(--text-color-darker)' }, 
-              ticks: { color: 'var(--text-color-darker)' }, 
-              grid: { color: 'var(--border-color)', borderDash: [2, 4] } 
+              title: { display: true, text: 'Kayıp Değeri (Loss)', font: { size: 12 }, color: textColorDarker }, 
+              ticks: { color: textColorDarker }, 
+              grid: { color: gridColor, borderDash: [2, 4] } 
           }, 
           x: { 
-              title: { display: true, text: 'Epoch', font: { size: 12 }, color: 'var(--text-color-darker)' }, 
+              title: { display: true, text: 'Epoch', font: { size: 12 }, color: textColorDarker }, 
               grid: { display: false }, 
-              ticks: { color: 'var(--text-color-darker)' }, 
+              ticks: { color: textColorDarker }, 
               type: 'category' 
           } 
       }
-  }), []);
+    });
+  }, [theme]);
 
   const lossChartData = useMemo(() => ({
     labels: Array.from({ length: Math.max(0, ...experiments.map(e => safeGet(e, 'results.history.loss.length', 0))) }, (_, i) => `E${i + 1}`),
@@ -124,7 +134,7 @@ function ComparisonView({ experiments, title, onClose }) {
             <table className={styles.summaryTable}>
               <thead>
                 <tr>
-                  <th>Deney (ID)</th>
+                  <th className={styles.idCellHeader}>Deney (ID)</th>
                   <th className={styles.numericHeader}>Öğrenme Oranı (LR)</th>
                   <th className={styles.numericHeader}>Gizli Katman Boyutu</th>
                   <th className={styles.numericHeader}>Final Kayıp</th>
