@@ -11,7 +11,7 @@ const ChevronDownIcon = ({ className = '' }) => (
 );
 ChevronDownIcon.propTypes = { className: PropTypes.string };
 
-function BatchCard({ batch, onSelect }) {
+function BatchCard({ batch, onSelect, onShowReport }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [view, setView] = useState('list');
 
@@ -36,9 +36,17 @@ function BatchCard({ batch, onSelect }) {
     batch.experiments.filter(e => e.status === 'SUCCESS' || e.status === 'FAILURE'), 
   [batch.experiments]);
 
+  const handleToggleExpand = () => {
+    // Eğer ilk defa açılıyorsa ve özet görünümü mümkünse, doğrudan özeti göster
+    if (!isExpanded && finishedExperiments.length > 0) {
+      setView('summary');
+    }
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <div className={`${styles.batchContainer} ${isExpanded ? styles.expanded : ''}`}>
-      <header className={styles.header} onClick={() => setIsExpanded(!isExpanded)}>
+      <header className={styles.header} onClick={handleToggleExpand}>
         <div className={styles.headerLeft}>
           <ChevronDownIcon className={`${styles.icon} ${isExpanded ? '' : styles.collapsed}`} />
           <div className={styles.info}>
@@ -71,6 +79,7 @@ function BatchCard({ batch, onSelect }) {
                     experiment={exp}
                     isSelected={exp.isSelected}
                     onSelect={() => onSelect(exp.experiment_id)}
+                    onShowReport={onShowReport}
                   />
                 ))}
               </div>
@@ -89,6 +98,7 @@ function BatchCard({ batch, onSelect }) {
 BatchCard.propTypes = {
   batch: PropTypes.object.isRequired,
   onSelect: PropTypes.func.isRequired,
+  onShowReport: PropTypes.func.isRequired,
 };
 
 export default BatchCard;

@@ -8,7 +8,6 @@ function ModelCard({ model, onPredictClick }) {
   const {
     experiment_id,
     pipeline_name,
-    completed_at,
     config_summary,
     results_summary,
   } = model;
@@ -28,31 +27,31 @@ function ModelCard({ model, onPredictClick }) {
           <h4>Performans Metrikleri</h4>
           <div className={styles.metricItem}>
             <span>Final Kayıp</span>
-            <span>{safeToFixed(results_summary.final_loss, 6)}</span>
+            <span>{safeToFixed(results_summary?.final_loss, 6)}</span>
           </div>
           <div className={styles.metricItem}>
             <span>R² Skoru</span>
-            <span>{safeToFixed(results_summary.r2_score, 4)}</span>
+            <span>{safeToFixed(results_summary?.r2_score, 4)}</span>
           </div>
           <div className={styles.metricItem}>
             <span>Ortalama Hata (MAE)</span>
-            <span>{safeToFixed(results_summary.mae, 4)}</span>
+            <span>{safeToFixed(results_summary?.mae, 4)}</span>
           </div>
         </div>
 
         <div className={styles.config}>
           <h4>Temel Konfigürasyon</h4>
           <div className={styles.configItem}>
-            <span>Sembol / Konum</span>
-            <span>{config_summary.ticker || 'N/A'}</span>
+            <span>{config_summary?.ticker ? 'Sembol' : 'Konum'}</span>
+            <span>{config_summary?.ticker || config_summary?.location || 'N/A'}</span>
           </div>
           <div className={styles.configItem}>
             <span>Epoch Sayısı</span>
-            <span>{config_summary.epochs}</span>
+            <span>{config_summary?.epochs || 'N/A'}</span>
           </div>
           <div className={styles.configItem}>
             <span>Öğrenme Oranı</span>
-            <span>{config_summary.lr}</span>
+            <span>{config_summary?.lr || 'N/A'}</span>
           </div>
         </div>
       </div>

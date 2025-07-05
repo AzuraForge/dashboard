@@ -1,0 +1,140 @@
+.pageLayout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+@media (max-width: 1200px) {
+    .pageLayout {
+        grid-template-columns: 1fr;
+    }
+    .sidebarColumn {
+        display: none; /* Küçük ekranlarda sepeti gizle, ileride daha iyi bir çözüm bulunabilir */
+    }
+}
+
+.mainColumn {
+    min-width: 0; /* Flex/Grid bug'larını önlemek için */
+}
+
+.sidebarColumn {
+    position: sticky;
+    top: 20px;
+}
+
+.experimentsListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.stateMessage {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-color-darker);
+    font-size: 1.1rem;
+}
+.errorMessage {
+    color: var(--error-color);
+    font-weight: 500;
+}
+
+/* Karşılaştırma Sepeti Stilleri */
+.basket {
+    background-color: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+}
+
+.basketTitle {
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.basketEmpty {
+    font-size: 0.9rem;
+    color: var(--text-color-darker);
+    text-align: center;
+    padding: 20px 0;
+    font-style: italic;
+}
+
+.basketList {
+    list-style-type: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.basketList li {
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background-color: var(--bg-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.basketItemInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.basketItemInfo span {
+    font-family: var(--font-mono);
+    color: var(--text-color-darker);
+    font-size: 0.8rem;
+}
+
+.basketItemRemove {
+    background: none;
+    border: none;
+    color: var(--text-color-darker);
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    padding: 0 5px;
+}
+
+.basketItemRemove:hover {
+    color: var(--error-color);
+}
+
+.basketActions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+}
+
+.clearButton {
+    background: none;
+    border: none;
+    color: var(--text-color-darker);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 5px;
+}
+
+.clearButton:hover {
+    color: var(--error-color);
+    text-decoration: underline;
+}
+
+.basketActions .button-primary:disabled {
+    background-color: var(--border-color);
+    transform: none;
+    cursor: not-allowed;
+}
