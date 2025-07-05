@@ -7,20 +7,31 @@
   transition: all 0.2s ease-in-out;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-md);
 }
 
 .selectedCard {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 30%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 20%, transparent), var(--shadow-lg);
 }
 
-.topSection {
+.expandedCard {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary-color) 25%, transparent), var(--shadow-lg);
+}
+
+/* === YENİ: Tıklanabilir başlık alanı === */
+.header {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto; /* checkbox, info, summary, actions */
   align-items: center;
   gap: 1.5rem;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.header:hover {
+  background-color: var(--hover-bg);
 }
 
 .checkboxStatus {
@@ -39,7 +50,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  overflow: hidden;
+  overflow: hidden; /* Taşan metinleri gizle */
 }
 
 .pipelineName {
@@ -57,115 +68,96 @@
   font-size: 0.8em;
   color: var(--text-color-darker);
   white-space: nowrap;
+  user-select: all;
 }
 
-.batchName {
-    background-color: var(--bg-color);
-    padding: 2px 6px;
-    border-radius: 4px;
-    display: inline-block;
-    max-width: fit-content;
-}
-
-.body {
-  padding: 1.5rem;
-  display: grid;
-  grid-template-columns: 250px 1fr;
+/* === YENİ: Başlıktaki özet alanı === */
+.summaryContainer {
+  display: flex;
   gap: 1.5rem;
+  font-size: 0.85em;
+  color: var(--text-color-darker);
 }
-
-.metricsSummary {
+.summaryContainer div {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  font-size: 0.9em;
-  padding-right: 1.5rem;
-  border-right: 1px solid var(--border-color);
+  align-items: flex-end;
 }
-
-.metricsSummary p {
-  margin: 0;
-  display: flex;
-  justify-content: space-between;
-}
-
-.divider {
-    border: none;
-    border-top: 1px solid var(--border-color);
-    margin: 0.75rem 0;
-}
-
-.metricsSummary strong {
-  color: var(--text-color-darker);
+.summaryContainer strong {
   font-weight: 500;
 }
-
-.metricsSummary span {
+.summaryContainer span {
   font-weight: 600;
   font-family: var(--font-mono);
   color: var(--text-color);
 }
 
+.actionsCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative; /* menünün doğru konumlanması için */
+}
+
+.actionsButton {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--text-color-darker);
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 0 8px;
+}
+.actionsButton:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.expandIcon {
+    color: var(--text-color-darker);
+    transition: transform 0.3s ease;
+}
+
+.expandedCard .expandIcon {
+    transform: rotate(180deg);
+}
+
+/* === YENİ: Genişletilebilir içerik === */
+.collapsibleContent {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out, border-top-width 0.4s ease-in-out;
+  padding: 0 1.5rem;
+  border-top: 0px solid var(--border-color);
+}
+.expandedCard .collapsibleContent {
+  max-height: 500px; /* Yeterince büyük bir değer */
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
 .chartsSection {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.5rem;
   min-height: 150px;
 }
 
 .liveProgressBarSection {
-    grid-column: 1 / -1; /* İki sütunu da kapla */
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid var(--border-color);
 }
 
 .progressHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    font-size: 0.85em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.85em;
 }
-
-.statusText {
-    color: var(--text-color-darker);
-}
-
-.epochCounter {
-    font-family: var(--font-mono);
-    font-weight: 600;
-}
-
-.liveProgressBarSection progress {
-    width: 100%;
-    height: 8px;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-.liveProgressBarSection progress::-webkit-progress-bar {
-    background-color: var(--bg-color);
-    border-radius: 4px;
-}
-
-.liveProgressBarSection progress::-webkit-progress-value {
-    background-color: var(--primary-color);
-    border-radius: 4px;
-    transition: width 0.3s ease-in-out;
-}
-
-/* Tek sütun düzeni için medya sorgusu */
-@media (max-width: 900px) {
-  .body {
-    grid-template-columns: 1fr;
-  }
-  .metricsSummary {
-    border-right: none;
-    border-bottom: 1px solid var(--border-color);
-    padding-right: 0;
-    padding-bottom: 1.5rem;
-  }
-  .chartsSection {
-    grid-template-columns: 1fr;
-  }
-}
+.statusText { color: var(--text-color-darker); }
+.epochCounter { font-family: var(--font-mono); font-weight: 600; }
+progress { width: 100%; height: 8px; appearance: none; -webkit-appearance: none; }
+progress::-webkit-progress-bar { background-color: var(--hover-bg); border-radius: 4px; }
+progress::-webkit-progress-value { background-color: var(--primary-color); border-radius: 4px; transition: width 0.3s ease-in-out; }
