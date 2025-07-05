@@ -12,6 +12,7 @@ import { ThemeContext } from '../context/ThemeContext';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale, zoomPlugin);
 
 const getChartOptions = (title, chartColors, isTimeScale, enableZoom, compactMode) => {
+    // ... Bu fonksiyon içeriği değişmedi ...
     const options = {
         responsive: true,
         maintainAspectRatio: false,
@@ -66,6 +67,7 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
   const { theme } = useContext(ThemeContext);
 
   const chartColors = useMemo(() => {
+    // ... Bu fonksiyon içeriği değişmedi ...
     const isLightTheme = theme === 'light';
     return {
       primary: '#42b983',
@@ -91,12 +93,12 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
       };
     }
     if (chartType === 'prediction') {
-      // === GÜRÜLTÜ AZALTMA İYİLEŞTİRMESİ ===
+      // === UI/UX İYİLEŞTİRMESİ: Gürültü Azaltma ===
       // Grafikte gösterilecek maksimum nokta sayısı
       const MAX_POINTS = 250; 
-      let timeIndex = data?.time_index || [];
-      let yTrue = data?.y_true || [];
-      let yPred = data?.y_pred || [];
+      let timeIndex = data?.results?.time_index || data?.time_index || [];
+      let yTrue = data?.results?.y_true || data?.y_true || [];
+      let yPred = data?.results?.y_pred || data?.y_pred || [];
 
       // Eğer veri canlı değilse ve nokta sayısı limiti aşıyorsa, sadece son N noktayı al
       if (!isLive && timeIndex.length > MAX_POINTS) {
@@ -117,7 +119,8 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
   }, [chartType, data, chartColors, isLive]);
 
   const chartTitle = chartType === 'loss' ? 'Eğitim Kaybı' : 'Tahmin Performansı';
-  const hasData = (chartType === 'loss' && data?.loss?.length > 0) || (chartType === 'prediction' && (data?.time_index?.length > 0 || (data?.y_true?.length > 0 && isLive)));
+  const hasData = (chartType === 'loss' && data?.loss?.length > 0) || 
+                  (chartType === 'prediction' && ( (data?.results?.time_index?.length > 0) || (data?.time_index?.length > 0) ));
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>

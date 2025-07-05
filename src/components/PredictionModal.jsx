@@ -7,47 +7,41 @@ import styles from './PredictionModal.module.css';
 import { toast } from 'react-toastify';
 
 function PredictionModal({ model, onClose }) {
-  const [inputData, setInputData] = useState({});
+  // === UI/UX İYİLEŞTİRMESİ: State'i basitleştiriyoruz ===
+  const [inputValue, setInputValue] = useState('');
   const [predictionResult, setPredictionResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Modelin beklediği özellik sütunlarını al
+  // Modelin beklediği temel bilgileri al
+  // Eğitim sırasında `results` içinde saklanan `feature_cols`'a erişiyoruz.
   const featureCols = model.config?.results?.feature_cols || [];
-  const seqLength = model.config?.model_params?.sequence_length || 'Bilinmiyor';
-
-  // Form alanları için state'i başlat
-  useEffect(() => {
-    if (featureCols.length > 0) {
-      const initialData = featureCols.reduce((acc, col) => {
-        acc[col] = '';
-        return acc;
-      }, {});
-      setInputData(initialData);
-    }
-  }, [featureCols]);
-
-  const handleInputChange = (e, colName) => {
-    setInputData(prev => ({ ...prev, [colName]: e.target.value }));
-  };
+  const targetCol = model.config?.results?.target_col || (featureCols.length > 0 ? featureCols[0] : 'Bilinmiyor');
+  const seqLength = model.config?.model_params?.sequence_length || 60;
 
   const handlePredict = async () => {
     setIsLoading(true);
     setPredictionResult(null);
 
+    // Girdiyi kontrol et
+    const values = String(inputValue || '').split(',').map(v => parseFloat(v.trim()));
+    if (values.length < seqLength || values.some(isNaN)) {
+      toast.error(`Lütfen en az ${seqLength} adet geçerli sayısal değeri virgülle ayırarak girin.`);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // Girilen veriyi modelin beklediği formata dönüştür
-      // Her özellik için `seqLength` kadar virgülle ayrılmış sayı bekliyoruz
+      // === UI/UX İYİLEŞTİRMESİ: Veri yükünü otomatik oluştur ===
+      // Kullanıcı sadece hedef değişkeni girer, biz diğer tüm özellikler için
+      // aynı veriyi kullanarak API'nin beklediği formatı oluştururuz.
       const dataPayload = [];
+      const relevantValues = values.slice(-seqLength); // Son N değeri al
+
       for (let i = 0; i < seqLength; i++) {
         const dataPoint = {};
         for (const col of featureCols) {
-          const values = String(inputData[col] || '').split(',').map(v => parseFloat(v.trim()));
-          if (values.length < seqLength || isNaN(values[i])) {
-            toast.error(`'${col}' için lütfen en az ${seqLength} adet geçerli sayı girin.`);
-            setIsLoading(false);
-            return;
-          }
-          dataPoint[col] = values[i];
+          // Tüm özellikler için aynı değeri kullanıyoruz
+          dataPoint[col] = relevantValues[i];
         }
         dataPayload.push(dataPoint);
       }
@@ -72,37 +66,32 @@ function PredictionModal({ model, onClose }) {
         </header>
         <div className={styles.body}>
           <p>
-            <b>{model.pipeline_name}</b> modeli ile tahmin yapmak için, modelin eğitildiği her özellik için
-            <b> en az {seqLength} adet </b>
-            geçmiş veriyi virgülle ayırarak girin.
+            <b>{model.pipeline_name}</b> modeli ile bir sonraki adımı tahmin etmek için, 
+            <b> '{targetCol}' </b> için geçmiş
+            <b> {seqLength} adet </b>
+            veriyi virgülle ayırarak girin.
           </p>
 
           <div className={styles.formContainer}>
-            {featureCols.length > 0 ? (
-              featureCols.map(col => (
-                <div className="form-group" key={col}>
-                  <label htmlFor={`predict-${col}`}>{col}</label>
-                  <textarea
-                    id={`predict-${col}`}
-                    className={styles.inputArea}
-                    placeholder={`Örn: 150.1, 151.2, 149.8, ... (${seqLength} adet)`}
-                    value={inputData[col] || ''}
-                    onChange={(e) => handleInputChange(e, col)}
-                    disabled={isLoading}
-                    rows={3}
-                  />
-                </div>
-              ))
-            ) : (
-              <p>Bu model için özellik bilgisi bulunamadı.</p>
-            )}
+            <div className="form-group">
+              <label htmlFor="predict-input">Geçmiş Veriler ({targetCol})</label>
+              <textarea
+                id="predict-input"
+                className={styles.inputArea}
+                placeholder={`Örn: 150.1, 151.2, 149.8, ... (en az ${seqLength} değer)`}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                disabled={isLoading}
+                rows={4}
+              />
+            </div>
           </div>
 
           {isLoading && <p style={{textAlign: 'center', color: 'var(--text-color-darker)'}}>Tahmin yapılıyor...</p>}
 
           {predictionResult && (
             <div className={styles.result}>
-              <p>Modelin Bir Sonraki Adım İçin Tahmini</p>
+              <p>Modelin Bir Sonraki Adım İçin Tahmini ({targetCol})</p>
               <div className={styles.predictionValue}>
                 {(predictionResult.prediction || 0).toFixed(4)}
               </div>
