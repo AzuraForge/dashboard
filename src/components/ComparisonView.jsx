@@ -1,5 +1,6 @@
+import React, { useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom'; // createPortal'ı import et
 import PropTypes from 'prop-types';
-import React, { useMemo } from 'react'; // useMemo import'u eklendi
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale } from 'chart.js';
 import 'chartjs-adapter-date-fns';
@@ -16,21 +17,32 @@ const safeGet = (obj, path, defaultValue = 'N/A') => {
   return value !== undefined && value !== null ? value : defaultValue;
 };
 
-// === YENİ: Metrikleri analiz edip en iyi/kötü değerleri bulan helper ===
 const analyzeMetrics = (experiments, metricPath, mode = 'min') => {
   const values = experiments.map(exp => ({ id: exp.experiment_id, value: safeGet(exp, metricPath, null) })).filter(item => item.value !== null);
   if (values.length < 2) return {};
-
   const sorted = [...values].sort((a, b) => a.value - b.value);
   const bestId = (mode === 'min') ? sorted[0].id : sorted[sorted.length - 1].id;
   const worstId = (mode === 'min') ? sorted[sorted.length - 1].id : sorted[0].id;
-
   return { best: bestId, worst: worstId };
 };
 
-function ComparisonView({ experiments, title, showCloseButton = false, onClose = () => {} }) {
+function ComparisonView({ experiments, title, onClose }) {
 
-  // === YENİ: Karşılaştırma metriklerini hesaplayan useMemo ===
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.classList.add('modal-open');
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.classList.remove('modal-open');
+    };
+  }, [onClose]);
+
   const metricAnalysis = useMemo(() => {
     return {
       loss: analyzeMetrics(experiments, 'results.final_loss', 'min'),
@@ -39,7 +51,6 @@ function ComparisonView({ experiments, title, showCloseButton = false, onClose =
     };
   }, [experiments]);
 
-  // === DEĞİŞİKLİK: Dinamik etiketler için düzenleme ===
   const getExperimentLabel = (exp) => {
     const params = [];
     if (safeGet(exp, 'config.training_params.lr', null) !== null) params.push(`LR:${safeGet(exp, 'config.training_params.lr')}`);
@@ -48,7 +59,19 @@ function ComparisonView({ experiments, title, showCloseButton = false, onClose =
   };
 
   const commonChartOptions = (chartTitle) => ({
-      // ... Bu fonksiyon içeriği değişmedi ...
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { 
+        legend: { position: 'top', labels: { color: 'var(--text-color-darker)', font: { size: 12 }, boxWidth: 15, padding: 20 } },
+        title: { display: true, text: chartTitle, font: { size: 16, weight: 'bold' }, color: 'var(--text-color)' },
+        tooltip: { backgroundColor: 'var(--content-bg)', borderColor: 'var(--border-color)', borderWidth: 1, titleColor: 'var(--text-color)', bodyColor: 'var(--text-color)', boxPadding: 4, },
+        zoom: { pan: { enabled: true, mode: 'x', modifierKey: 'alt' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' } }
+      },
+      scales: {
+          y: { title: { display: true, text: 'Kayıp Değeri (Loss)', font: { size: 12 }, color: 'var(--text-color-darker)' }, ticks: { color: 'var(--text-color-darker)' }, grid: { color: 'var(--border-color)', borderDash: [2, 4] } }, 
+          x: { title: { display: true, text: 'Epoch', font: { size: 12 }, color: 'var(--text-color-darker)' }, grid: { display: false }, ticks: { color: 'var(--text-color-darker)' }, type: 'category' } 
+      }
   });
 
   const lossChartData = {
@@ -62,67 +85,68 @@ function ComparisonView({ experiments, title, showCloseButton = false, onClose =
     })),
   };
   
-  const content = (
-    <>
-      <div className={styles.chartContainer}>
-        <Line data={lossChartData} options={commonChartOptions('Eğitim Kaybı Karşılaştırması')} />
-        <p className="chart-instructions">Yakınlaştırmak için fare tekerleğini kullanın. Sıfırlamak için çift tıklayın. Kaydırmak için <strong>Alt + Sürükle</strong>.</p>
-      </div>
-      
-      <h4 className={styles.sectionTitle}>Parametre ve Sonuçlar</h4>
-      <div className={`table-container ${styles.summaryTableContainer}`}>
-        <table className={styles.summaryTable}>
-          <thead>
-            <tr>
-              <th>Deney (ID)</th>
-              <th>Öğrenme Oranı (LR)</th>
-              <th>Gizli Katman Boyutu</th>
-              <th className={styles.metricHeader}>Final Kayıp</th>
-              <th className={styles.metricHeader}>R² Skoru</th>
-              <th className={styles.metricHeader}>Ort. Mutlak Hata (MAE)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {experiments.map((exp, i) => {
-                // === YENİ: Her hücre için stil belirleme ===
-                const getCellStyle = (metricName, analysis) => {
-                    if (analysis.best === exp.experiment_id) return styles.bestMetric;
-                    if (analysis.worst === exp.experiment_id) return styles.worstMetric;
-                    return '';
-                };
+  return createPortal(
+    <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+        <header className={styles.header}>
+          <h2>{title} ({experiments.length} adet)</h2>
+          <button className={styles.closeButton} onClick={onClose} aria-label="Kapat">×</button>
+        </header>
+        <div className={styles.body}>
+          <div className={styles.chartContainer}>
+            <Line data={lossChartData} options={commonChartOptions('Eğitim Kaybı Karşılaştırması')} />
+            <p className="chart-instructions">Yakınlaştırmak için fare tekerleğini kullanın. Sıfırlamak için çift tıklayın. Kaydırmak için <strong>Alt + Sürükle</strong>.</p>
+          </div>
+          
+          <h4 className={styles.sectionTitle}>Parametre ve Sonuçlar</h4>
+          <div className={`table-container ${styles.summaryTableContainer}`}>
+            <table className={styles.summaryTable}>
+              <thead>
+                <tr>
+                  <th>Deney (ID)</th>
+                  <th>Öğrenme Oranı (LR)</th>
+                  <th>Gizli Katman Boyutu</th>
+                  <th className={styles.metricHeader}>Final Kayıp</th>
+                  <th className={styles.metricHeader}>R² Skoru</th>
+                  <th className={styles.metricHeader}>Ort. Mutlak Hata (MAE)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {experiments.map((exp, i) => {
+                    const getCellStyle = (metricName, analysis) => {
+                        if (analysis.best === exp.experiment_id) return styles.bestMetric;
+                        if (analysis.worst === exp.experiment_id) return styles.worstMetric;
+                        return '';
+                    };
 
-                return (
-                  <tr key={exp.experiment_id}>
-                    <td>
-                      <span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>
-                      {exp.experiment_id.slice(0, 8)}...
-                    </td>
-                    <td>{safeGet(exp, 'config.training_params.lr', 'N/A')}</td>
-                    <td>{safeGet(exp, 'config.model_params.hidden_size', 'N/A')}</td>
-                    <td className={getCellStyle('loss', metricAnalysis.loss)}>{safeGet(exp, 'results.final_loss', 'N/A').toFixed ? safeGet(exp, 'results.final_loss').toFixed(6) : 'N/A'}</td>
-                    <td className={getCellStyle('r2', metricAnalysis.r2)}>{safeGet(exp, 'results.metrics.r2_score', 'N/A').toFixed ? safeGet(exp, 'results.metrics.r2_score').toFixed(4) : 'N/A'}</td>
-                    <td className={getCellStyle('mae', metricAnalysis.mae)}>{safeGet(exp, 'results.metrics.mae', 'N/A').toFixed ? safeGet(exp, 'results.metrics.mae').toFixed(4) : 'N/A'}</td>
-                  </tr>
-                )
-            })}
-          </tbody>
-        </table>
+                    return (
+                      <tr key={exp.experiment_id}>
+                        <td>
+                          <span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>
+                          {exp.experiment_id.slice(0, 8)}...
+                        </td>
+                        <td>{safeGet(exp, 'config.training_params.lr', 'N/A')}</td>
+                        <td>{safeGet(exp, 'config.model_params.hidden_size', 'N/A')}</td>
+                        <td className={getCellStyle('loss', metricAnalysis.loss)}>{safeGet(exp, 'results.final_loss', 'N/A').toFixed ? safeGet(exp, 'results.final_loss').toFixed(6) : 'N/A'}</td>
+                        <td className={getCellStyle('r2', metricAnalysis.r2)}>{safeGet(exp, 'results.metrics.r2_score', 'N/A').toFixed ? safeGet(exp, 'results.metrics.r2_score').toFixed(4) : 'N/A'}</td>
+                        <td className={getCellStyle('mae', metricAnalysis.mae)}>{safeGet(exp, 'results.metrics.mae', 'N/A').toFixed ? safeGet(exp, 'results.metrics.mae').toFixed(4) : 'N/A'}</td>
+                      </tr>
+                    )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </>
+    </div>,
+    document.body
   );
-
-  if (showCloseButton) {
-    // ... Bu kısım değişmedi ...
-  }
-
-  return <div className={styles.body}>{content}</div>;
 }
 
 ComparisonView.propTypes = {
   experiments: PropTypes.array.isRequired,
   title: PropTypes.string,
-  showCloseButton: PropTypes.bool,
-  onClose: PropTypes.func,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default ComparisonView;

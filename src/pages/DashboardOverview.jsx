@@ -11,7 +11,7 @@ import { fetchExperiments } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './DashboardOverview.module.css';
 
-
+// --- Yardımcı Bileşen: Yüzen Karşılaştırma Butonu ---
 function FloatingCompareButton({ count, onClick }) {
     if (count < 1) return null;
     return (
@@ -20,9 +20,12 @@ function FloatingCompareButton({ count, onClick }) {
         </button>
     );
 }
-FloatingCompareButton.propTypes = { count: PropTypes.number.isRequired, onClick: PropTypes.func.isRequired };
+FloatingCompareButton.propTypes = {
+    count: PropTypes.number.isRequired,
+    onClick: PropTypes.func.isRequired,
+};
 
-
+// --- Yardımcı Bileşen: Karşılaştırma Sepeti ---
 function ComparisonBasket({ selectedExperiments, onStartComparison, onClear, onRemove }) {
     return (
         <div className={styles.basket}>
@@ -57,9 +60,14 @@ function ComparisonBasket({ selectedExperiments, onStartComparison, onClear, onR
         </div>
     );
 }
-ComparisonBasket.propTypes = { selectedExperiments: PropTypes.array.isRequired, onStartComparison: PropTypes.func.isRequired, onClear: PropTypes.func.isRequired, onRemove: PropTypes.func.isRequired };
+ComparisonBasket.propTypes = {
+    selectedExperiments: PropTypes.array.isRequired,
+    onStartComparison: PropTypes.func.isRequired,
+    onClear: PropTypes.func.isRequired,
+    onRemove: PropTypes.func.isRequired,
+};
 
-
+// --- Ana Bileşen: DashboardOverview ---
 function DashboardOverview() {
   const [experiments, setExperiments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,12 +77,7 @@ function DashboardOverview() {
   const [isComparisonModalOpen, setIsComparisonModalOpen] = useState(false);
   const [viewingReportId, setViewingReportId] = useState(null);
 
-  useEffect(() => {
-    const isModalOpen = isComparisonModalOpen || !!viewingReportId;
-    document.body.classList.toggle('modal-open', isModalOpen);
-    return () => document.body.classList.remove('modal-open');
-  }, [isComparisonModalOpen, viewingReportId]);
-
+  // Veri çekme ve periyodik güncelleme mantığı
   useEffect(() => {
     let isMounted = true;
     const loadExperiments = async (showLoadingIndicator) => {
@@ -82,7 +85,6 @@ function DashboardOverview() {
       try {
         const response = await fetchExperiments();
         if (isMounted) {
-          // --- SAVUNMACI KODLAMA: Gelen verinin bir dizi olduğundan emin olalım ---
           setExperiments(Array.isArray(response.data) ? response.data : []);
           setError(null);
         }
@@ -107,33 +109,37 @@ function DashboardOverview() {
     };
   }, []);
 
+  // Deney seçme/bırakma mantığı
   const handleComparisonSelect = useCallback((experimentId) => {
     setSelectedForComparison(prev => {
       const newSelection = new Set(prev);
-      if (newSelection.has(experimentId)) newSelection.delete(experimentId);
-      else {
-        if (newSelection.size >= 8) toast.warn("En fazla 8 deney karşılaştırılabilir.");
-        else newSelection.add(experimentId);
+      if (newSelection.has(experimentId)) {
+        newSelection.delete(experimentId);
+      } else {
+        if (newSelection.size >= 8) {
+            toast.warn("En fazla 8 deney karşılaştırılabilir.");
+        } else {
+            newSelection.add(experimentId);
+        }
       }
       return newSelection;
     });
   }, []);
   
+  // Karşılaştırma için seçilen verileri hazırlama
   const comparisonData = useMemo(() => {
-      // --- SAVUNMACI KODLAMA: experiments'ın dizi olduğundan emin ol ---
       if (!Array.isArray(experiments)) return [];
       return experiments.filter(exp => selectedForComparison.has(exp.experiment_id))
           .sort((a, b) => [...selectedForComparison].indexOf(a.experiment_id) - [...selectedForComparison].indexOf(b.experiment_id));
   }, [selectedForComparison, experiments]);
 
+  // Arama ve gruplama mantığı
   const groupedAndFilteredExperiments = useMemo(() => {
-    // --- SAVUNMACI KODLAMA: experiments'ın dizi olduğundan emin ol ---
     if (!Array.isArray(experiments)) return [];
 
     const filtered = experiments.filter(exp => {
         if (searchTerm) {
             const lowerTerm = searchTerm.toLowerCase();
-            // --- SAVUNMACI KODLAMA: Olası null/undefined alanları kontrol et ---
             return [exp.experiment_id, exp.pipeline_name, exp.config_summary?.ticker, exp.batch_name]
                 .some(field => field && String(field).toLowerCase().includes(lowerTerm));
         }
@@ -161,36 +167,41 @@ function DashboardOverview() {
     return [...sortedBatches, ...singleExperiments];
   }, [experiments, searchTerm, selectedForComparison]);
   
+  // Karşılaştırma modalını açma
   const handleStartComparison = useCallback(() => { 
     if (comparisonData.length < 2) {
-      toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.');
-      return;
+        toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.');
+        return;
     }
     setIsComparisonModalOpen(true);
   }, [comparisonData]);
 
+  // Sepeti temizleme
   const handleClearComparison = useCallback(() => { setSelectedForComparison(new Set()); }, []);
 
+  // Yükleme ve Hata durumları
   if (loading) return <LoadingSpinner message="Deneyler yükleniyor..." />;
   if (error) return <div className={`${styles.stateMessage} ${styles.errorMessage}`}>{error}</div>;
 
+  // Ana Render
   return (
     <>
-      {isComparisonModalOpen && <ComparisonView experiments={comparisonData} title="Seçilen Deneylerin Karşılaştırması" showCloseButton={true} onClose={() => setIsComparisonModalOpen(false)} />}
+      {isComparisonModalOpen && <ComparisonView experiments={comparisonData} title="Seçilen Deneylerin Karşılaştırması" onClose={() => setIsComparisonModalOpen(false)} />}
       {viewingReportId && <ReportModal experimentId={viewingReportId} onClose={() => setViewingReportId(null)} />}
+      
       <FloatingCompareButton count={comparisonData.length} onClick={handleStartComparison} />
       
       <div className={styles.pageLayout}>
         <div className={styles.mainColumn}>
-          <div className="page-header">
-              <h1>Deney Paneli</h1>
-              <p>Tüm deneylerinizi tek bir yerden yönetin, takip edin ve karşılaştırın.</p>
-          </div>
-          <div className="form-group" style={{ marginBottom: '25px' }}>
-              <input type="text" id="search-term" placeholder="ID, Pipeline, Sembol, Grup veya Etiket ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          </div>
-          <div className={styles.experimentsListContainer}> 
-              {/* --- DÜZELTME: Render etmeden önce groupedAndFilteredExperiments'ın varlığını ve bir dizi olduğunu kontrol et --- */}
+            <div className="page-header">
+                <h1>Deney Paneli</h1>
+                <p>Tüm deneylerinizi tek bir yerden yönetin, takip edin ve karşılaştırın.</p>
+            </div>
+            <div className="form-group" style={{ marginBottom: '25px' }}>
+                <input type="text" id="search-term" placeholder="ID, Pipeline, Sembol, Grup veya Etiket ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            
+            <div className={styles.experimentsListContainer}> 
               {groupedAndFilteredExperiments && groupedAndFilteredExperiments.length > 0 ? (
                   groupedAndFilteredExperiments.map((item) => (
                       item.batch_id 
@@ -202,15 +213,16 @@ function DashboardOverview() {
                   <p>Filtrelerinize uyan veya mevcut bir deney bulunamadı.</p>
                 </div>
               )}
-          </div>
+            </div>
         </div>
+        
         <aside className={styles.sidebarColumn}>
-          <ComparisonBasket 
-              selectedExperiments={comparisonData} 
-              onStartComparison={handleStartComparison}
-              onClear={handleClearComparison}
-              onRemove={handleComparisonSelect}
-          />
+            <ComparisonBasket 
+                selectedExperiments={comparisonData} 
+                onStartComparison={handleStartComparison}
+                onClear={handleClearComparison}
+                onRemove={handleComparisonSelect}
+            />
         </aside>
       </div>
     </>

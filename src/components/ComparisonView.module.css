@@ -1,24 +1,18 @@
-/* ======================================================
-   ComparisonView.module.css
-   - Modal görünümü için kapsamlı düzeltmeler içerir.
-   ====================================================== */
-
-/* --- YENİ: Modal Overlay Stili --- */
 .modalOverlay {
-  position: fixed; /* Sayfanın geri kalanından bağımsız, sabit konum */
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background-color: color-mix(in srgb, var(--bg-color) 85%, transparent);
   backdrop-filter: blur(8px);
-  z-index: 5000; /* Diğer tüm elementlerin üzerinde olmasını sağlar */
+  z-index: 5000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
   opacity: 0;
-  animation: fadeIn 0.3s ease forwards; /* Yumuşak giriş animasyonu */
+  animation: fadeIn 0.3s ease forwards;
 }
 
 @keyframes fadeIn {
@@ -27,20 +21,19 @@
   }
 }
 
-/* --- YENİ: Modal İçerik Kutusu Stili --- */
 .modalContent {
   background-color: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 16px;
   width: 100%;
-  max-width: 1400px; /* Modalın maksimum genişliği */
-  height: 95vh; /* Ekranın %95'i kadar yükseklik */
+  max-width: 1400px;
+  height: 95vh;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* İçerik taşarsa modal içinde kalsın */
+  overflow: hidden;
   transform: scale(0.95);
-  animation: popIn 0.3s ease 0.1s forwards; /* Yumuşak giriş animasyonu */
+  animation: popIn 0.3s ease 0.1s forwards;
 }
 
 @keyframes popIn {
@@ -49,14 +42,13 @@
   }
 }
 
-/* --- YENİ: Modal Başlığı --- */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 20px 30px;
   border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0; /* İçerik artsa bile başlık küçülmesin */
+  flex-shrink: 0;
 }
 
 .header h2 {
@@ -65,24 +57,23 @@
 }
 
 .closeButton {
-    background: none;
-    border: none;
-    font-size: 1.8rem;
-    line-height: 1;
-    color: var(--text-color-darker);
-    cursor: pointer;
-    padding: 0;
-    transition: color 0.2s ease;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--text-color-darker);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
 }
 .closeButton:hover {
-    color: var(--text-color);
+  color: var(--text-color);
 }
 
-/* --- YENİ: Modal Gövdesi (kaydırılabilir alan) --- */
 .body {
   padding: 30px;
   flex-grow: 1;
-  overflow-y: auto; /* Sadece bu alan dikey olarak kaydırılabilsin */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -104,7 +95,6 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-/* Tablo Stilleri (önceki adımla aynı, burada tamlık için bulunuyor) */
 .summaryTableContainer {
   padding: 0;
 }
@@ -154,7 +144,7 @@
 .bestMetric, .worstMetric {
   font-weight: 700 !important;
   border-radius: 6px;
-  padding: 6px 10px; /* Biraz daha kompakt */
+  padding: 6px 10px;
   display: inline-block;
   background-color: transparent;
 }
