@@ -13,6 +13,7 @@ function ModelRegistry() {
     setLoading(true);
     try {
       const { data } = await fetchExperiments();
+      // Filtreleme mantığını düzeltiyoruz: status 'SUCCESS' VE model_path dolu olmalı.
       const successfulModels = data.filter(exp => exp.status === 'SUCCESS' && exp.model_path);
       setModels(successfulModels);
     } catch (error) {
@@ -50,9 +51,11 @@ function ModelRegistry() {
               />
             ))
           ) : (
-            <div className="card" style={{textAlign: 'center'}}>
-                <p>Henüz kaydedilmiş başarılı bir model bulunmuyor.</p>
-                <p>Bir deneyi başarıyla tamamladığınızda, modeliniz burada listelenecektir.</p>
+            <div className="card" style={{textAlign: 'center', padding: '2rem'}}>
+                <p style={{fontSize: '1.1em', fontWeight: 500}}>Henüz Kaydedilmiş Bir Model Bulunmuyor</p>
+                <p style={{color: 'var(--text-color-darker)', marginTop: '0.5rem'}}>
+                    Bir deneyi başarıyla tamamladığınızda, eğitilmiş modeliniz burada listelenecektir.
+                </p>
             </div>
           )}
         </div>

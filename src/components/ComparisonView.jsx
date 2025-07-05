@@ -11,18 +11,35 @@ const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec
 
 // Helper to safely get nested properties
 const safeGet = (obj, path, defaultValue = 'N/A') => {
+  if (!obj || typeof path !== 'string') {
+    return defaultValue;
+  }
   const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
   return value !== undefined && value !== null ? value : defaultValue;
 };
 
 function ComparisonView({ experiments, title, showCloseButton = false, onClose = () => {} }) {
+
   const commonChartOptions = (chartTitle, isTimeScale = false) => ({
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: { 
-        legend: { position: 'top', labels: { color: 'var(--text-color-darker)', font: { size: 12 }, boxWidth: 15, padding: 20 } },
-        title: { display: true, text: chartTitle, font: { size: 16, weight: 'bold' }, color: 'var(--text-color)' },
+        legend: { 
+          position: 'top', 
+          labels: { 
+            color: 'var(--text-color-darker)', 
+            font: { size: 12 }, 
+            boxWidth: 15, 
+            padding: 20 
+          } 
+        },
+        title: { 
+          display: true, 
+          text: chartTitle, 
+          font: { size: 16, weight: 'bold' }, 
+          color: 'var(--text-color)' 
+        },
         tooltip: {
           backgroundColor: 'var(--content-bg)',
           borderColor: 'var(--border-color)',
@@ -38,12 +55,22 @@ function ComparisonView({ experiments, title, showCloseButton = false, onClose =
       },
       scales: {
           y: { 
-            title: { display: true, text: 'Kayıp Değeri (Loss)', font: { size: 12 }, color: 'var(--text-color-darker)' }, 
+            title: { 
+              display: true, 
+              text: 'Kayıp Değeri (Loss)', 
+              font: { size: 12 }, 
+              color: 'var(--text-color-darker)' 
+            }, 
             ticks: { color: 'var(--text-color-darker)' }, 
             grid: { color: 'var(--border-color)', borderDash: [2, 4] } 
           }, 
           x: { 
-            title: { display: true, text: 'Epoch', font: { size: 12 }, color: 'var(--text-color-darker)' }, 
+            title: { 
+              display: true, 
+              text: 'Epoch', 
+              font: { size: 12 }, 
+              color: 'var(--text-color-darker)' 
+            }, 
             grid: { display: false },
             ticks: { color: 'var(--text-color-darker)' },
             type: 'category',
@@ -75,11 +102,11 @@ function ComparisonView({ experiments, title, showCloseButton = false, onClose =
           <thead>
             <tr>
               <th>Deney (ID)</th>
-              <th>LR</th>
-              <th>Gizli Katman</th>
+              <th>Öğrenme Oranı (LR)</th>
+              <th>Gizli Katman Boyutu</th>
               <th>Final Kayıp</th>
               <th>R² Skoru</th>
-              <th>MAE</th>
+              <th>Ort. Mutlak Hata (MAE)</th>
             </tr>
           </thead>
           <tbody>
@@ -126,4 +153,4 @@ ComparisonView.propTypes = {
   onClose: PropTypes.func,
 };
 
-export default ComparisonView;
+export default ComparisonView;s
