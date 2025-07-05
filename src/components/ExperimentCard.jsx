@@ -1,4 +1,3 @@
-// dashboard/src/components/ExperimentCard.jsx
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { toast } from 'react-toastify';
@@ -9,15 +8,13 @@ const Icon = ({ path }) => <svg width="16" height="16" viewBox="0 0 24 24" fill=
 Icon.propTypes = { path: PropTypes.string.isRequired };
 const ICONS = {
     copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
-    report: "M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
+    report: "M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
 };
 
-function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) { // onShowReport prop'u eklendi
-    // ... (state ve useEffect hook'ları aynı kalıyor) ...
+function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) {
     const [actionsOpen, setActionsOpen] = useState(false);
     const {
-        experiment_id, status, task_id, pipeline_name, created_at, completed_at, failed_at,
-        config, results, config_summary, results_summary,
+        experiment_id, status, task_id, pipeline_name, config, results, config_summary, results_summary
     } = experiment;
 
     const [liveData, setLiveData] = useState({ loss: [], time_index: [], y_true: [], y_pred: [] });
@@ -43,7 +40,7 @@ function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) { //
                 setLiveEpoch(data.details.epoch || 0);
                 setLiveData(prev => {
                     const newLiveData = { ...prev };
-                    if (data.details.loss !== undefined) { newLiveData.loss = [...prev.loss, data.details.loss]; }
+                    if (data.details.loss !== undefined) newLiveData.loss = [...prev.loss, data.details.loss];
                     if (data.details.validation_data) {
                         newLiveData.time_index = data.details.validation_data.x_axis || [];
                         newLiveData.y_true = data.details.validation_data.y_true || [];
@@ -58,6 +55,40 @@ function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) { //
     }, [isRunning, task_id]);
 
     const safeToFixed = (value, digits) => (typeof value === 'number' && !isNaN(value)) ? value.toFixed(digits) : 'N/A';
+    
+    const renderConfigSummary = () => {
+        const summaryItems = [];
+        if (config_summary?.ticker) {
+            summaryItems.push({ label: 'Sembol', value: config_summary.ticker });
+        } else if (config_summary?.location) {
+            summaryItems.push({ label: 'Konum', value: config_summary.location });
+        } else {
+            summaryItems.push({ label: 'Veri Kaynağı', value: 'Özel' });
+        }
+        summaryItems.push({ label: 'Epochs', value: totalEpochs || 'N/A' });
+        summaryItems.push({ label: 'LR', value: safeToFixed(config_summary?.lr, 5) });
+        return summaryItems;
+    };
+
+    const renderResultsSummary = () => {
+        const summaryItems = [];
+        if (results_summary?.accuracy) {
+            summaryItems.push({ label: 'Doğruluk', value: safeToFixed(results_summary.accuracy, 4) });
+        }
+        if (results_summary?.final_loss) {
+            summaryItems.push({ label: 'Final Kayıp', value: safeToFixed(results_summary.final_loss, 6) });
+        }
+        if (results_summary?.r2_score !== null && results_summary?.r2_score !== undefined) {
+            const r2_value = results_summary.r2_score;
+            const display_r2 = (Math.abs(r2_value) < 0.0001) ? '≈0.0' : safeToFixed(r2_value, 4);
+            summaryItems.push({ label: 'R² Skoru', value: display_r2 });
+        }
+        if (results_summary?.mae) {
+            summaryItems.push({ label: 'MAE', value: safeToFixed(results_summary.mae, 4) });
+        }
+        return summaryItems;
+    };
+
     const lossChartData = isRunning ? { loss: liveData.loss } : { loss: results?.history?.loss };
     const predictionChartData = isRunning ? liveData : results;
     
@@ -86,7 +117,6 @@ function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) { //
                     {actionsOpen && (
                         <div className="actions-menu" onMouseLeave={() => setActionsOpen(false)}>
                             <button onClick={handleCopyId}><Icon path={ICONS.copy} /> ID'yi Kopyala</button>
-                            {/* Rapor Görüntüle Butonu */}
                             {isSuccess && <button onClick={() => { onShowReport(experiment_id); setActionsOpen(false); }}><Icon path={ICONS.report} /> Raporu Görüntüle</button>}
                         </div>
                     )}
@@ -95,12 +125,13 @@ function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) { //
 
             <div className={styles.body}>
                 <div className={styles.metricsSummary}>
-                    <p><strong>Sembol/Konum:</strong> <span>{config_summary?.ticker || `${config?.data_sourcing?.latitude || 'N/A'}, ${config?.data_sourcing?.longitude || 'N/A'}`}</span></p>
-                    <p><strong>Epochs:</strong> <span>{totalEpochs || 'N/A'}</span></p>
-                    <p><strong>LR:</strong> <span>{safeToFixed(config_summary?.lr ?? config?.training_params?.lr, 4)}</span></p>
-                    <p><strong>Final Kayıp:</strong> <span>{safeToFixed(results_summary?.final_loss, 6)}</span></p>
-                    <p><strong>R² Skoru:</strong> <span>{safeToFixed(results_summary?.r2_score, 4)}</span></p>
-                    <p><strong>MAE:</strong> <span>{safeToFixed(results_summary?.mae, 4)}</span></p>
+                    {renderConfigSummary().map(item => (
+                        <p key={item.label}><strong>{item.label}:</strong> <span>{item.value}</span></p>
+                    ))}
+                    <hr className={styles.divider} />
+                    {renderResultsSummary().map(item => (
+                        <p key={item.label}><strong>{item.label}:</strong> <span>{item.value}</span></p>
+                    ))}
                 </div>
 
                 <div className={styles.chartsSection}>
@@ -126,7 +157,7 @@ ExperimentCard.propTypes = {
     experiment: PropTypes.object.isRequired,
     isSelected: PropTypes.bool.isRequired,
     onSelect: PropTypes.func.isRequired,
-    onShowReport: PropTypes.func.isRequired, // Yeni prop
+    onShowReport: PropTypes.func.isRequired,
 };
 
 export default React.memo(ExperimentCard);

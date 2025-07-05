@@ -89,6 +89,12 @@
   justify-content: space-between;
 }
 
+.divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 0.75rem 0;
+}
+
 .metricsSummary strong {
   color: var(--text-color-darker);
   font-weight: 500;
