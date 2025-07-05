@@ -1,4 +1,98 @@
-/*
-  Bu dosya, gelecekte çok temel, uygulama geneli reset kuralları için kullanılabilir.
-  Şimdilik, projenin tüm özel stil mantığı App.css dosyasında merkezileştirilmiştir.
-*/
+/* ==========================================================================
+   AzuraForge Dashboard - Global ve Temel Stiller
+   Bu dosya, uygulamanın temel görünümünü, renk paletini ve
+   tipografisini tanımlar. "Uygulamanın Derisi"dir.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. KÖK DEĞİŞKENLER (Tasarım Sistemi - Design Tokens)
+   ========================================================================== */
+:root {
+  /* Renkler */
+  --primary-color: #42b983;
+  --primary-color-dark: #369c70;
+  --secondary-color: #3b82f6;
+  --success-color: #22c55e;
+  --error-color: #ef4444;
+  --warning-color: #f59e0b;
+  --info-color: #3b82f6;
+
+  /* Koyu Tema (Varsayılan) */
+  --text-color: #f1f5f9; /* Daha parlak (slate-100) */
+  --text-color-darker: #94a3b8; /* Daha az parlak (slate-400) */
+  --text-inverse: #ffffff;
+  --bg-color: #0f172a; /* Slate 900 */
+  --content-bg: #1e293b; /* Slate 800 */
+  --border-color: #334155; /* Slate 700 */
+  --hover-bg: #2a3a52; /* Slate 800'ün biraz açığı */
+
+  /* Tipografi */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro", "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
+
+  /* Diğer Değişkenler */
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+  --border-radius: 12px;
+}
+
+/* Açık Tema Değişkenleri */
+body.light-theme {
+  --text-color: #1e293b;
+  --text-color-darker: #475569;
+  --bg-color: #f8fafc;
+  --content-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --hover-bg: #f1f5f9;
+  --success-color: #16a34a;
+  --error-color: #dc2626;
+  --warning-color: #d97706;
+  --info-color: #2563eb;
+}
+
+/* ==========================================================================
+   2. TEMEL RESET VE GLOBAL STİLLER
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+#root { 
+  width: 100vw; 
+  height: 100vh; 
+  overflow: hidden; 
+  position: relative; 
+}
+
+/* ==========================================================================
+   3. ÜÇÜNCÜ PARTİ KÜTÜPHANE STİLLERİ (GLOBAL OVERRIDES)
+   ========================================================================== */
+.Toastify__toast {
+  background-color: var(--content-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  font-family: var(--font-sans) !important;
+}
+.Toastify__progress-bar {
+  background: var(--primary-color) !important;
+}
+.Toastify__close-button {
+  color: var(--text-color) !important;
+}

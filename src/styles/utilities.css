@@ -1,0 +1,108 @@
+/* ==========================================================================
+   AzuraForge Dashboard - Yardımcı Sınıflar (Utility Classes)
+   Bu dosya, uygulama genelinde tekrar kullanılabilen, küçük ve
+   odaklanmış CSS sınıflarını içerir.
+   ========================================================================== */
+
+/* Genel Kart Yapısı */
+.card {
+  background-color: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  transition: background-color 0.3s, border-color 0.3s, box-shadow 0.2s, transform 0.2s;
+  padding: 25px;
+}
+
+/* Ana Buton Stili */
+.button-primary {
+  background-color: var(--primary-color);
+  color: var(--text-inverse);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.button-primary:hover:not(:disabled) {
+  background-color: var(--primary-color-dark);
+  transform: translateY(-2px);
+}
+.button-primary:disabled {
+  background-color: var(--border-color);
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+/* Durum Rozetleri */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-badge::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.status-badge.status-started, .status-badge.status-progress { background-color: color-mix(in srgb, var(--info-color) 20%, transparent); color: #60a5fa; }
+.status-badge.status-started::before, .status-badge.status-progress::before { background-color: var(--info-color); animation: pulse 2s infinite; }
+.status-badge.status-success { background-color: color-mix(in srgb, var(--success-color) 20%, transparent); color: #4ade80; }
+.status-badge.status-success::before { background-color: var(--success-color); }
+.status-badge.status-failure, .status-badge.status-error { background-color: color-mix(in srgb, var(--error-color) 20%, transparent); color: #f87171; }
+.status-badge.status-failure::before, .status-badge.status-error::before { background-color: var(--error-color); }
+.status-badge.status-pending { background-color: color-mix(in srgb, var(--text-color-darker) 20%, transparent); color: var(--text-color-darker); }
+.status-badge.status-pending::before { background-color: var(--text-color-darker); }
+
+/* Temel Form Grupları */
+.form-group {
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--text-color-darker);
+}
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-size: 1em;
+  font-family: var(--font-sans);
+  transition: background-color 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 30%, transparent);
+}
+
+/* Genel Aksiyon Menüsü Stilleri */
+.actions-menu { position: absolute; right: 0; top: 35px; background-color: var(--hover-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-lg); z-index: 100; display: flex; flex-direction: column; padding: 8px; min-width: 180px; }
+.actions-menu button { background: none; border: none; color: var(--text-color); padding: 10px 15px; text-align: left; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 10px; font-size: 0.9em; width: 100%; }
+.actions-menu button:hover { background-color: var(--secondary-color); color: var(--text-inverse); }
+
+/* Genel Grafik ve Tablo Stilleri */
+.chart-instructions { position: absolute; bottom: 5px; right: 10px; font-size: 0.75em; color: var(--text-color-darker); background-color: color-mix(in srgb, var(--content-bg) 80%, transparent); padding: 2px 8px; border-radius: 4px; opacity: 0.7; }
+.color-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; vertical-align: middle; }
+.table-container { background-color: var(--content-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius); box-shadow: var(--shadow-md); padding: 0; overflow: hidden; }

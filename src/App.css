@@ -1,90 +1,19 @@
 /* ==========================================================================
-   AzuraForge Dashboard - Global Stil Dosyası
+   AzuraForge Dashboard - Ana Layout Stilleri
+   Bu dosya, sadece uygulamanın genel yerleşimini (layout) kontrol eder.
    ========================================================================== */
 
-/* ==========================================================================
-   1. KÖK DEĞİŞKENLER (Tasarım Sistemi - Design Tokens)
-   ========================================================================== */
-:root {
-  /* Renkler */
-  --primary-color: #42b983;
-  --primary-color-dark: #369c70;
-  --secondary-color: #3b82f6;
-  --success-color: #22c55e;
-  --error-color: #ef4444;
-  --warning-color: #f59e0b;
-  --info-color: #3b82f6;
-
-  /* Koyu Tema (Varsayılan) */
-  --text-color: #f1f5f9; /* Daha parlak (slate-100) */
-  --text-color-darker: #cbd5e1; /* Daha parlak (slate-300) */
-  --text-inverse: #ffffff;
-  --bg-color: #0f172a;
-  --content-bg: #1e293b;
-  --border-color: #334155;
-  --hover-bg: #2a3a52;
-
-  /* Tipografi */
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro", "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
-
-  /* Diğer Değişkenler */
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
-  --border-radius: 12px;
-}
-
-/* Açık Tema Değişkenleri */
-body.light-theme {
-  --text-color: #1e293b;
-  --text-color-darker: #475569;
-  --bg-color: #f8fafc;
-  --content-bg: #ffffff;
-  --border-color: #e2e8f0;
-  --hover-bg: #f1f5f9;
-  --success-color: #16a34a;
-  --error-color: #dc2626;
-  --warning-color: #d97706;
-  --info-color: #2563eb;
-}
-
-/* ==========================================================================
-   2. TEMEL RESET VE GLOBAL STİLLER
-   ========================================================================== */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
-}
-
-#root, .app-layout { 
+.app-layout { 
   display: flex; 
   flex-direction: column; 
-  width: 100vw; 
-  height: 100vh; 
-  overflow: hidden; 
-  position: relative; 
+  height: 100%; /* #root'un yüksekliğini devralır */
 }
 
-/* ==========================================================================
-   3. ANA YAPI (LAYOUT)
-   ========================================================================== */
 .main-content { 
   flex-grow: 1; 
   padding: 30px; 
   overflow-y: auto; 
   position: relative; 
-  z-index: 10; 
 }
 
 .page-header {
@@ -106,130 +35,4 @@ body {
   color: var(--text-color-darker);
   font-size: 1.1em;
   margin: 0;
-}
-
-/* ==========================================================================
-   5. TEMEL YARDIMCI SINIFLAR (UTILITY CLASSES)
-   ========================================================================== */
-
-/* Genel Kart Yapısı */
-.card {
-  background-color: var(--content-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-md);
-  transition: background-color 0.3s, border-color 0.3s;
-  padding: 25px;
-}
-
-/* Ana Buton Stili */
-.button-primary {
-  background-color: var(--primary-color);
-  color: var(--text-inverse);
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1em;
-  font-weight: 600;
-  transition: background-color 0.2s ease, transform 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.button-primary:hover:not(:disabled) {
-  background-color: var(--primary-color-dark);
-  transform: translateY(-2px);
-}
-.button-primary:disabled {
-  background-color: var(--border-color);
-  cursor: not-allowed;
-  opacity: 0.6;
-  transform: none;
-}
-
-/* Durum Rozetleri */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 0.8em;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-.status-badge::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-.status-badge.status-started, .status-badge.status-progress { background-color: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-.status-badge.status-started::before, .status-badge.status-progress::before { background-color: var(--info-color); animation: pulse 2s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-.status-badge.status-success { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; }
-.status-badge.status-success::before { background-color: var(--success-color); }
-.status-badge.status-failure, .status-badge.status-error { background-color: rgba(239, 68, 68, 0.2); color: #f87171; }
-.status-badge.status-failure::before, .status-badge.status-error::before { background-color: var(--error-color); }
-.status-badge.status-pending { background-color: rgba(148, 163, 184, 0.2); color: var(--text-color-darker); }
-.status-badge.status-pending::before { background-color: var(--text-color-darker); }
-
-/* Temel Form Grupları */
-.form-group {
-  margin-bottom: 20px;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: var(--text-color-darker);
-}
-.form-group input, .form-group select {
-  width: 100%;
-  padding: 12px;
-  background-color: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  color: var(--text-color);
-  font-size: 1em;
-  font-family: var(--font-sans);
-  transition: background-color 0.3s, border-color 0.3s, color 0.3s;
-}
-.form-group input:focus, .form-group select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 30%, transparent);
-}
-
-/* Genel Aksiyon Menüsü Stilleri */
-.actions-cell { position: relative; text-align: right; }
-.actions-button { background: none; border: none; font-size: 24px; line-height: 1; color: var(--text-color-darker); cursor: pointer; border-radius: 4px; padding: 0 8px; }
-.actions-button:hover { background-color: var(--border-color); color: var(--text-color); }
-.actions-menu { position: absolute; right: 0; top: 35px; background-color: var(--hover-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-lg); z-index: 100; display: flex; flex-direction: column; padding: 8px; min-width: 180px; }
-.actions-menu button { background: none; border: none; color: var(--text-color); padding: 10px 15px; text-align: left; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 10px; font-size: 0.9em; width: 100%; }
-.actions-menu button:hover { background-color: var(--secondary-color); color: var(--text-inverse); }
-
-/* Genel Grafik ve Tablo Stilleri */
-.chart-instructions { position: absolute; bottom: 5px; right: 10px; font-size: 0.75em; color: var(--text-color-darker); background-color: color-mix(in srgb, var(--content-bg) 80%, transparent); padding: 2px 8px; border-radius: 4px; opacity: 0.7; }
-.color-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; vertical-align: middle; }
-.table-container { background-color: var(--content-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius); box-shadow: var(--shadow-md); padding: 0; overflow: hidden; }
-/* ... (Diğer genel tablo stilleri buraya eklenebilir) ... */
-
-/* ==========================================================================
-   7. ÜÇÜNCÜ PARTİ KÜTÜPHANE STİLLERİ
-   ========================================================================== */
-.Toastify__toast {
-  background-color: var(--content-bg) !important;
-  color: var(--text-color) !important;
-  border: 1px solid var(--border-color) !important;
-  border-radius: 8px !important;
-  font-family: var(--font-sans) !important;
-}
-.Toastify__progress-bar {
-  background: var(--primary-color) !important;
-}
-.Toastify__close-button {
-  color: var(--text-color) !important;
 }
