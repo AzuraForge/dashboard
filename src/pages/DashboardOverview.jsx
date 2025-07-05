@@ -6,7 +6,6 @@ import ExperimentCard from '../components/ExperimentCard';
 import BatchCard from '../components/BatchCard';
 import ComparisonView from '../components/ComparisonView';
 import ReportModal from '../components/ReportModal';
-// --- YENİ: LoadingSpinner import edildi ---
 import LoadingSpinner from '../components/LoadingSpinner';
 import { fetchExperiments } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
@@ -25,7 +24,6 @@ FloatingCompareButton.propTypes = { count: PropTypes.number.isRequired, onClick:
 
 
 function ComparisonBasket({ selectedExperiments, onStartComparison, onClear, onRemove }) {
-    // ... Bu bileşenin içeriği değişmedi ...
     return (
         <div className={styles.basket}>
             <h3 className={styles.basketTitle}>Karşılaştırma Sepeti</h3>
@@ -77,17 +75,15 @@ function DashboardOverview() {
     return () => document.body.classList.remove('modal-open');
   }, [isComparisonModalOpen, viewingReportId]);
 
-  // === DÜZELTME: useCallback'i kaldırıyoruz, çünkü bu fonksiyonun kendisi bir bağımlılık oluşturuyor. ===
-  // useEffect içinde anonim bir async fonksiyon kullanmak daha temiz bir patern.
   useEffect(() => {
-    let isMounted = true; // Cleanup sırasında state güncellemelerini önlemek için
-    
+    let isMounted = true;
     const loadExperiments = async (showLoadingIndicator) => {
       if (showLoadingIndicator) setLoading(true);
       try {
         const response = await fetchExperiments();
         if (isMounted) {
-          setExperiments(response.data);
+          // --- SAVUNMACI KODLAMA: Gelen verinin bir dizi olduğundan emin olalım ---
+          setExperiments(Array.isArray(response.data) ? response.data : []);
           setError(null);
         }
       } catch (err) {
@@ -102,26 +98,67 @@ function DashboardOverview() {
       }
     };
     
-    loadExperiments(true); // İlk yükleme
-    const intervalId = setInterval(() => loadExperiments(false), 10000); // Periyodik yükleme
+    loadExperiments(true);
+    const intervalId = setInterval(() => loadExperiments(false), 10000);
     
-    // Cleanup fonksiyonu
     return () => {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, []); // Bağımlılık dizisi boş kalacak, bu da effect'in sadece component mount edildiğinde çalışmasını sağlar.
+  }, []);
 
   const handleComparisonSelect = useCallback((experimentId) => {
-    // ... Bu fonksiyon değişmedi ...
+    setSelectedForComparison(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(experimentId)) newSelection.delete(experimentId);
+      else {
+        if (newSelection.size >= 8) toast.warn("En fazla 8 deney karşılaştırılabilir.");
+        else newSelection.add(experimentId);
+      }
+      return newSelection;
+    });
   }, []);
   
   const comparisonData = useMemo(() => {
-    // ... Bu fonksiyon değişmedi ...
+      // --- SAVUNMACI KODLAMA: experiments'ın dizi olduğundan emin ol ---
+      if (!Array.isArray(experiments)) return [];
+      return experiments.filter(exp => selectedForComparison.has(exp.experiment_id))
+          .sort((a, b) => [...selectedForComparison].indexOf(a.experiment_id) - [...selectedForComparison].indexOf(b.experiment_id));
   }, [selectedForComparison, experiments]);
 
   const groupedAndFilteredExperiments = useMemo(() => {
-    // ... Bu fonksiyon değişmedi ...
+    // --- SAVUNMACI KODLAMA: experiments'ın dizi olduğundan emin ol ---
+    if (!Array.isArray(experiments)) return [];
+
+    const filtered = experiments.filter(exp => {
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            // --- SAVUNMACI KODLAMA: Olası null/undefined alanları kontrol et ---
+            return [exp.experiment_id, exp.pipeline_name, exp.config_summary?.ticker, exp.batch_name]
+                .some(field => field && String(field).toLowerCase().includes(lowerTerm));
+        }
+        return true;
+    });
+
+    const batches = {};
+    const singleExperiments = [];
+    filtered.forEach(exp => {
+      const experimentWithSelection = { ...exp, isSelected: selectedForComparison.has(exp.experiment_id) };
+      if (exp.batch_id) {
+        if (!batches[exp.batch_id]) {
+          batches[exp.batch_id] = { batch_id: exp.batch_id, batch_name: exp.batch_name, experiments: [] };
+        }
+        batches[exp.batch_id].experiments.push(experimentWithSelection);
+      } else {
+        singleExperiments.push(experimentWithSelection);
+      }
+    });
+
+    Object.values(batches).forEach(batch => {
+      batch.experiments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    });
+    const sortedBatches = Object.values(batches).sort((a,b) => new Date(b.experiments[0].created_at) - new Date(a.created_at));
+    return [...sortedBatches, ...singleExperiments];
   }, [experiments, searchTerm, selectedForComparison]);
   
   const handleStartComparison = useCallback(() => { 
@@ -134,7 +171,6 @@ function DashboardOverview() {
 
   const handleClearComparison = useCallback(() => { setSelectedForComparison(new Set()); }, []);
 
-  // === DÜZELTME: Yükleme durumu için yeni spinner bileşenini kullanıyoruz ===
   if (loading) return <LoadingSpinner message="Deneyler yükleniyor..." />;
   if (error) return <div className={`${styles.stateMessage} ${styles.errorMessage}`}>{error}</div>;
 
@@ -154,7 +190,8 @@ function DashboardOverview() {
               <input type="text" id="search-term" placeholder="ID, Pipeline, Sembol, Grup veya Etiket ara..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <div className={styles.experimentsListContainer}> 
-              {groupedAndFilteredExperiments.length > 0 ? (
+              {/* --- DÜZELTME: Render etmeden önce groupedAndFilteredExperiments'ın varlığını ve bir dizi olduğunu kontrol et --- */}
+              {groupedAndFilteredExperiments && groupedAndFilteredExperiments.length > 0 ? (
                   groupedAndFilteredExperiments.map((item) => (
                       item.batch_id 
                       ? <BatchCard key={item.batch_id} batch={item} onSelect={handleComparisonSelect} onShowReport={setViewingReportId} />
