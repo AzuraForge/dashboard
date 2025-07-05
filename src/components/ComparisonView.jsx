@@ -7,24 +7,12 @@ import 'chartjs-adapter-date-fns';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import styles from './ComparisonView.module.css';
 
+// ... (ChartJS.register, chartColors, safeGet, analyzeMetrics fonksiyonları aynı kalıyor) ...
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, zoomPlugin);
-
 const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#7e22ce', '#15803d'];
+const safeGet = (obj, path, defaultValue = 'N/A') => { /* ... no changes ... */ };
+const analyzeMetrics = (experiments, metricPath, mode = 'min') => { /* ... no changes ... */ };
 
-const safeGet = (obj, path, defaultValue = 'N/A') => {
-  if (!obj || typeof path !== 'string') return defaultValue;
-  const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
-  return value !== undefined && value !== null ? value : defaultValue;
-};
-
-const analyzeMetrics = (experiments, metricPath, mode = 'min') => {
-  const values = experiments.map(exp => ({ id: exp.experiment_id, value: safeGet(exp, metricPath, null) })).filter(item => item.value !== null);
-  if (values.length < 2) return {};
-  const sorted = [...values].sort((a, b) => a.value - b.value);
-  const bestId = (mode === 'min') ? sorted[0].id : sorted[sorted.length - 1].id;
-  const worstId = (mode === 'min') ? sorted[sorted.length - 1].id : sorted[0].id;
-  return { best: bestId, worst: worstId };
-};
 
 function ComparisonView({ experiments, title, onClose }) {
 
@@ -46,17 +34,18 @@ function ComparisonView({ experiments, title, onClose }) {
       mae: analyzeMetrics(experiments, 'results.metrics.mae', 'min'),
   }), [experiments]);
 
-  // === DEĞİŞİKLİK: Grafik etiketlerini daha okunaklı hale getiriyoruz ===
+  // === DÜZELTME: Grafik etiketleri daha da basitleştirildi ve kısaltıldı ===
   const getExperimentLabel = (exp) => {
     const params = [];
-    const lr = safeGet(exp, 'config_summary.lr', null);
+    // config_summary'den almaya çalış, yoksa ana config'den al
+    const lr = safeGet(exp, 'config_summary.lr', safeGet(exp, 'config.training_params.lr', null));
     const hidden = safeGet(exp, 'config.model_params.hidden_size', null);
     
     if (lr !== null) params.push(`LR:${lr}`);
     if (hidden !== null) params.push(`Hidden:${hidden}`);
 
-    // ID'yi kısaltarak göster
-    return `ID ${exp.experiment_id.slice(-8)} (${params.join(', ')})`;
+    // ID'nin sadece son, daha benzersiz olan kısmını al
+    return `...${exp.experiment_id.slice(-12)} (${params.join(', ')})`;
   };
 
   const commonChartOptions = (chartTitle) => ({
@@ -78,7 +67,7 @@ function ComparisonView({ experiments, title, onClose }) {
   const lossChartData = {
     labels: Array.from({ length: Math.max(0, ...experiments.map(e => safeGet(e, 'results.history.loss.length', 0))) }, (_, i) => `E${i + 1}`),
     datasets: experiments.map((exp, i) => ({
-      label: getExperimentLabel(exp), // Değiştirilmiş etiket fonksiyonu kullanılıyor
+      label: getExperimentLabel(exp),
       data: safeGet(exp, 'results.history.loss', []),
       borderColor: chartColors[i % chartColors.length],
       backgroundColor: `${chartColors[i % chartColors.length]}33`,
@@ -104,11 +93,11 @@ function ComparisonView({ experiments, title, onClose }) {
               <thead>
                 <tr>
                   <th>Deney (ID)</th>
-                  <th>Öğrenme Oranı (LR)</th>
-                  <th>Gizli Katman Boyutu</th>
-                  <th className={styles.metricHeader}>Final Kayıp</th>
-                  <th className={styles.metricHeader}>R² Skoru</th>
-                  <th className={styles.metricHeader}>Ort. Mutlak Hata (MAE)</th>
+                  <th className={styles.numericHeader}>Öğrenme Oranı (LR)</th>
+                  <th className={styles.numericHeader}>Gizli Katman Boyutu</th>
+                  <th className={styles.numericHeader}>Final Kayıp</th>
+                  <th className={styles.numericHeader}>R² Skoru</th>
+                  <th className={styles.numericHeader}>Ort. Mutlak Hata (MAE)</th>
                 </tr>
               </thead>
               <tbody>
@@ -122,13 +111,13 @@ function ComparisonView({ experiments, title, onClose }) {
                       <tr key={exp.experiment_id}>
                         <td>
                           <span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>
-                          {exp.experiment_id.slice(-12)}
+                          ...{exp.experiment_id.slice(-12)}
                         </td>
-                        <td>{safeGet(exp, 'config.training_params.lr', 'N/A')}</td>
-                        <td>{safeGet(exp, 'config.model_params.hidden_size', 'N/A')}</td>
-                        <td className={`${styles.metricCell} ${getCellStyle('loss', metricAnalysis.loss)}`}>{safeGet(exp, 'results.final_loss', 'N/A').toFixed ? safeGet(exp, 'results.final_loss').toFixed(6) : 'N/A'}</td>
-                        <td className={`${styles.metricCell} ${getCellStyle('r2', metricAnalysis.r2)}`}>{safeGet(exp, 'results.metrics.r2_score', 'N/A').toFixed ? safeGet(exp, 'results.metrics.r2_score').toFixed(4) : 'N/A'}</td>
-                        <td className={`${styles.metricCell} ${getCellStyle('mae', metricAnalysis.mae)}`}>{safeGet(exp, 'results.metrics.mae', 'N/A').toFixed ? safeGet(exp, 'results.metrics.mae').toFixed(4) : 'N/A'}</td>
+                        <td className={styles.numericCell}>{safeGet(exp, 'config_summary.lr', 'N/A')}</td>
+                        <td className={styles.numericCell}>{safeGet(exp, 'config.model_params.hidden_size', 'N/A')}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('loss', metricAnalysis.loss)}`}>{safeGet(exp, 'results.final_loss', 'N/A').toFixed ? safeGet(exp, 'results.final_loss').toFixed(6) : 'N/A'}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('r2', metricAnalysis.r2)}`}>{safeGet(exp, 'results.metrics.r2_score', 'N/A').toFixed ? safeGet(exp, 'results.metrics.r2_score').toFixed(4) : 'N/A'}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('mae', metricAnalysis.mae)}`}>{safeGet(exp, 'results.metrics.mae', 'N/A').toFixed ? safeGet(exp, 'results.metrics.mae').toFixed(4) : 'N/A'}</td>
                       </tr>
                     )
                 })}

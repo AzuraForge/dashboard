@@ -1,226 +1,325 @@
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: color-mix(in srgb, var(--bg-color) 85%, transparent);
-  backdrop-filter: blur(8px);
-  z-index: 5000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  opacity: 0;
-  animation: fadeIn 0.3s ease forwards;
-}
-
-@keyframes fadeIn {
-  to {
-    opacity: 1;
+  .modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: color-mix(in srgb, var(--bg-color) 85%, transparent);
+    backdrop-filter: blur(8px);
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
   }
-}
 
-.modalContent {
-  background-color: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  width: 100%;
-  max-width: 1400px;
-  height: 95vh;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transform: scale(0.95);
-  animation: popIn 0.3s ease 0.1s forwards;
-}
-
-@keyframes popIn {
-  to {
-    transform: scale(1);
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+    }
   }
-}
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 30px;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
+  .modalContent {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 1400px;
+    height: 95vh;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.95);
+    animation: popIn 0.3s ease 0.1s forwards;
+  }
 
-.header h2 {
-  margin: 0;
-  font-size: 1.5em;
-}
+  @keyframes popIn {
+    to {
+      transform: scale(1);
+    }
+  }
 
-.closeButton {
-  background: none;
-  border: none;
-  font-size: 1.8rem;
-  line-height: 1;
-  color: var(--text-color-darker);
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s ease;
-}
-.closeButton:hover {
-  color: var(--text-color);
-}
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
 
-.body {
-  padding: 30px;
-  flex-grow: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
+  .header h2 {
+    margin: 0;
+    font-size: 1.5em;
+  }
 
-.chartContainer {
-  height: 400px;
-  min-height: 300px;
-  width: 100%;
-  position: relative;
-}
+  .closeButton {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    line-height: 1;
+    color: var(--text-color-darker);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease;
+  }
+  .closeButton:hover {
+    color: var(--text-color);
+  }
 
-.sectionTitle {
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
-}
+  .body {
+    padding: 30px;
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
 
-.summaryTableContainer {
-  padding: 0;
-}
+  .chartContainer {
+    height: 400px;
+    min-height: 300px;
+    width: 100%;
+    position: relative;
+  }
 
-.summaryTable {
-  width: 100%;
-  border-collapse: collapse;
-}
+  .sectionTitle {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
 
-.summaryTable th,
-.summaryTable td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color);
-  white-space: nowrap;
-}
+  .summaryTableContainer {
+    padding: 0;
+  }
 
-.summaryTable th {
-  color: var(--text-color-darker);
-  font-size: 0.85em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+  .summaryTable {
+    width: 100%;
+    border-collapse: collapse;
+  }
 
-.summaryTable tbody tr:last-child td {
-  border-bottom: none;
-}
+  .summaryTable th,
+  .summaryTable td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
 
-.summaryTable tbody tr:hover {
-  background-color: var(--hover-bg);
-}
+  .summaryTable th {
+    color: var(--text-color-darker);
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 
-.summaryTable td {
-  font-size: 0.95em;
-  font-family: var(--font-mono);
-}
+  .summaryTable tbody tr:last-child td {
+    border-bottom: none;
+  }
 
-.metricHeader {
-  text-align: right;
-}
+  .summaryTable tbody tr:hover {
+    background-color: var(--hover-bg);
+  }
 
-.summaryTable td:not(:first-child):not(:nth-child(2)):not(:nth-child(3)) {
+  .summaryTable td {
+    font-size: 0.95em;
+    font-family: var(--font-mono);
+  }
+
+  .metricHeader {
     text-align: right;
-}
+  }
 
-.bestMetric, .worstMetric {
-  font-weight: 700 !important;
-  border-radius: 6px;
-  padding: 6px 10px;
-  display: inline-block;
-  background-color: transparent;
-}
+  .summaryTable td:not(:first-child):not(:nth-child(2)):not(:nth-child(3)) {
+      text-align: right;
+  }
 
-.bestMetric {
-  color: #4ade80;
-  background-color: color-mix(in srgb, #22c55e 15%, transparent);
-}
+  .bestMetric, .worstMetric {
+    font-weight: 700 !important;
+    border-radius: 6px;
+    padding: 6px 10px;
+    display: inline-block;
+    background-color: transparent;
+  }
 
-.worstMetric {
-  color: #f87171;
-  background-color: color-mix(in srgb, #ef4444 15%, transparent);
-}
+  .bestMetric {
+    color: #4ade80;
+    background-color: color-mix(in srgb, #22c55e 15%, transparent);
+  }
 
-/* ... Dosyanın üst kısmı aynı ... */
+  .worstMetric {
+    color: #f87171;
+    background-color: color-mix(in srgb, #ef4444 15%, transparent);
+  }
 
-.summaryTable {
-  width: 100%;
-  border-collapse: collapse;
-}
+  /* ... Dosyanın üst kısmı aynı ... */
 
-.summaryTable th,
-.summaryTable td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color);
-  white-space: nowrap;
-  vertical-align: middle;
-}
+  .summaryTable {
+    width: 100%;
+    border-collapse: collapse;
+  }
 
-.summaryTable th {
-  color: var(--text-color-darker);
-  font-size: 0.85em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+  .summaryTable th,
+  .summaryTable td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
 
-/* === DEĞİŞİKLİK: Metrik başlıklarının sağa hizalanmasını sağlıyoruz === */
-.metricHeader {
-  text-align: right;
-}
+  .summaryTable th {
+    color: var(--text-color-darker);
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 
-.summaryTable tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.summaryTable tbody tr:hover {
-  background-color: var(--hover-bg);
-}
-
-.summaryTable td {
-  font-size: 0.95em;
-  font-family: var(--font-mono);
-}
-
-/* === DEĞİŞİKLİK: Metrik hücrelerinin sağa hizalanmasını sağlıyoruz === */
-.metricCell {
+  /* === DEĞİŞİKLİK: Metrik başlıklarının sağa hizalanmasını sağlıyoruz === */
+  .metricHeader {
     text-align: right;
-}
+  }
 
-.bestMetric, .worstMetric {
-  font-weight: 700 !important;
-  border-radius: 6px;
-  padding: 6px 10px;
-  display: inline-block;
-  background-color: transparent;
-}
+  .summaryTable tbody tr:last-child td {
+    border-bottom: none;
+  }
 
-/* === DEĞİŞİKLİK: Koyu tema için daha okunaklı renkler === */
-.bestMetric {
-  color: #4ade80; /* Tailwind Green 400 - Parlak Yeşil */
-  background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
-}
+  .summaryTable tbody tr:hover {
+    background-color: var(--hover-bg);
+  }
 
-.worstMetric {
-  color: #f87171; /* Tailwind Red 400 - Parlak Kırmızı */
-  background-color: color-mix(in srgb, var(--error-color) 15%, transparent);
-}
+  .summaryTable td {
+    font-size: 0.95em;
+    font-family: var(--font-mono);
+  }
+
+  /* === DEĞİŞİKLİK: Metrik hücrelerinin sağa hizalanmasını sağlıyoruz === */
+  .metricCell {
+      text-align: right;
+  }
+
+  .bestMetric, .worstMetric {
+    font-weight: 700 !important;
+    border-radius: 6px;
+    padding: 6px 10px;
+    display: inline-block;
+    background-color: transparent;
+  }
+
+  /* === DEĞİŞİKLİK: Koyu tema için daha okunaklı renkler === */
+  .bestMetric {
+    color: #4ade80; /* Tailwind Green 400 - Parlak Yeşil */
+    background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
+  }
+
+  .worstMetric {
+    color: #f87171; /* Tailwind Red 400 - Parlak Kırmızı */
+    background-color: color-mix(in srgb, var(--error-color) 15%, transparent);
+  }
+
+  /* ... Dosyanın üst kısmı (modalOverlay, modalContent vb.) aynı ... */
+
+  .modalOverlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: color-mix(in srgb, var(--bg-color) 85%, transparent);
+    backdrop-filter: blur(8px);
+    z-index: 5000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem;
+    opacity: 0; animation: fadeIn 0.3s ease forwards;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .modalContent {
+    background-color: var(--content-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    width: 100%; max-width: 1400px; height: 95vh;
+    box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.95); animation: popIn 0.3s ease 0.1s forwards;
+  }
+  @keyframes popIn { to { transform: scale(1); } }
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 30px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  .header h2 { margin: 0; font-size: 1.5em; }
+  .closeButton {
+      background: none; border: none; font-size: 1.8rem; line-height: 1;
+      color: var(--text-color-darker); cursor: pointer; padding: 0; transition: color 0.2s ease;
+  }
+  .closeButton:hover { color: var(--text-color); }
+  .body {
+    padding: 30px; flex-grow: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 30px;
+  }
+  .chartContainer { height: 400px; min-height: 300px; width: 100%; position: relative; }
+  .sectionTitle {
+    margin-top: 2rem; margin-bottom: 1rem; font-size: 1.2rem; font-weight: 600;
+    padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);
+  }
+  .summaryTableContainer { padding: 0; }
+
+  .summaryTable { width: 100%; border-collapse: collapse; }
+  .summaryTable th, .summaryTable td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .summaryTable th {
+    color: var(--text-color-darker); font-size: 0.85em; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .summaryTable tbody tr:last-child td { border-bottom: none; }
+  .summaryTable tbody tr:hover { background-color: var(--hover-bg); }
+  .summaryTable td { font-size: 0.95em; font-family: var(--font-mono); }
+
+
+  /* === DÜZELTME: Hizalama için yeni sınıflar === */
+  .numericHeader {
+    text-align: right;
+  }
+
+  .numericCell {
+    text-align: right;
+  }
+
+
+  /* === DÜZELTME: Hem açık hem koyu temada çalışan renkler === */
+  .bestMetric, .worstMetric {
+    font-weight: 700 !important;
+    border-radius: 6px;
+    padding: 6px 10px;
+    display: inline-block;
+  }
+
+  .bestMetric {
+    background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
+    color: color-mix(in srgb, var(--success-color) 100%, var(--text-color) 0%);
+  }
+
+  .worstMetric {
+    background-color: color-mix(in srgb, var(--error-color) 15%, transparent);
+    color: color-mix(in srgb, var(--error-color) 100%, var(--text-color) 0%);
+  }
+
+  /* Açık temada okunabilirliği artırmak için metin rengini daha da koyulaştır */
+  .light-theme .bestMetric {
+    color: #14532d; /* Koyu yeşil */
+  }
+  .light-theme .worstMetric {
+    color: #991b1b; /* Koyu kırmızı */
+  }
