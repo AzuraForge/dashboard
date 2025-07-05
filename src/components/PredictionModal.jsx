@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import { API_BASE_URL } from '../services/api';
@@ -7,22 +7,20 @@ import styles from './PredictionModal.module.css';
 import { toast } from 'react-toastify';
 
 function PredictionModal({ model, onClose }) {
-  // === UI/UX İYİLEŞTİRMESİ: State'i basitleştiriyoruz ===
   const [inputValue, setInputValue] = useState('');
   const [predictionResult, setPredictionResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Modelin beklediği temel bilgileri al
-  // Eğitim sırasında `results` içinde saklanan `feature_cols`'a erişiyoruz.
+  // === DÜZELTME: Veri yolunu `model.results` olarak güncelliyoruz ===
   const featureCols = model.results?.feature_cols || [];
-  const targetCol = model.results?.target_col || (featureCols.length > 0 ? featureCols[0] : 'Bilinmiyor');
+  const targetCol = model.results?.target_col || 'Bilinmiyor';
   const seqLength = model.config?.model_params?.sequence_length || 60;
+  // === DÜZELTME SONU ===
 
   const handlePredict = async () => {
     setIsLoading(true);
     setPredictionResult(null);
 
-    // Girdiyi kontrol et
     const values = String(inputValue || '').split(',').map(v => parseFloat(v.trim()));
     if (values.length < seqLength || values.some(isNaN)) {
       toast.error(`Lütfen en az ${seqLength} adet geçerli sayısal değeri virgülle ayırarak girin.`);
@@ -31,16 +29,12 @@ function PredictionModal({ model, onClose }) {
     }
 
     try {
-      // === UI/UX İYİLEŞTİRMESİ: Veri yükünü otomatik oluştur ===
-      // Kullanıcı sadece hedef değişkeni girer, biz diğer tüm özellikler için
-      // aynı veriyi kullanarak API'nin beklediği formatı oluştururuz.
       const dataPayload = [];
-      const relevantValues = values.slice(-seqLength); // Son N değeri al
+      const relevantValues = values.slice(-seqLength);
 
       for (let i = 0; i < seqLength; i++) {
         const dataPoint = {};
         for (const col of featureCols) {
-          // Tüm özellikler için aynı değeri kullanıyoruz
           dataPoint[col] = relevantValues[i];
         }
         dataPayload.push(dataPoint);
