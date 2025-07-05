@@ -26,7 +26,6 @@ function ReportModal({ experimentId, onClose }) {
     loadReport();
   }, [experimentId]);
 
-  // === DEĞİŞİKLİK BAŞLANGICI: transformImageUri -> urlTransform ===
   // urlTransform fonksiyonu, her URL için çağrılır ve yeni URL'i döndürmelidir.
   const urlTransform = (url) => {
     // Eğer URL göreceli bir imaj yolu ise, onu tam API yoluna çevir.
@@ -36,7 +35,6 @@ function ReportModal({ experimentId, onClose }) {
     // Diğer tüm URL'leri olduğu gibi bırak.
     return url;
   };
-  // === DEĞİŞİKLİK SONU ===
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -52,7 +50,6 @@ function ReportModal({ experimentId, onClose }) {
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              // === DEĞİŞİKLİK: prop adı güncellendi ===
               urlTransform={urlTransform}
               components={{
                 h1: ({node, ...props}) => <h2 {...props} />,

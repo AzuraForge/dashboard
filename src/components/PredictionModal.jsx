@@ -12,7 +12,7 @@ function PredictionModal({ model, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
 
   // Modelin beklediği özellik sütunlarını al
-  const featureCols = model.config?.feature_cols || [];
+  const featureCols = model.config?.results?.feature_cols || [];
   const seqLength = model.config?.model_params?.sequence_length || 'Bilinmiyor';
 
   // Form alanları için state'i başlat
