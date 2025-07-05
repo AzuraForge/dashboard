@@ -1,4 +1,113 @@
-/* ... Diğer tüm stiller aynı kalıyor ... */
+/* ======================================================
+   ComparisonView.module.css
+   - Modal görünümü için kapsamlı düzeltmeler içerir.
+   ====================================================== */
+
+/* --- YENİ: Modal Overlay Stili --- */
+.modalOverlay {
+  position: fixed; /* Sayfanın geri kalanından bağımsız, sabit konum */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: color-mix(in srgb, var(--bg-color) 85%, transparent);
+  backdrop-filter: blur(8px);
+  z-index: 5000; /* Diğer tüm elementlerin üzerinde olmasını sağlar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards; /* Yumuşak giriş animasyonu */
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* --- YENİ: Modal İçerik Kutusu Stili --- */
+.modalContent {
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1400px; /* Modalın maksimum genişliği */
+  height: 95vh; /* Ekranın %95'i kadar yükseklik */
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* İçerik taşarsa modal içinde kalsın */
+  transform: scale(0.95);
+  animation: popIn 0.3s ease 0.1s forwards; /* Yumuşak giriş animasyonu */
+}
+
+@keyframes popIn {
+  to {
+    transform: scale(1);
+  }
+}
+
+/* --- YENİ: Modal Başlığı --- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0; /* İçerik artsa bile başlık küçülmesin */
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.5em;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    line-height: 1;
+    color: var(--text-color-darker);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+.closeButton:hover {
+    color: var(--text-color);
+}
+
+/* --- YENİ: Modal Gövdesi (kaydırılabilir alan) --- */
+.body {
+  padding: 30px;
+  flex-grow: 1;
+  overflow-y: auto; /* Sadece bu alan dikey olarak kaydırılabilsin */
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.chartContainer {
+  height: 400px;
+  min-height: 300px;
+  width: 100%;
+  position: relative;
+}
+
+.sectionTitle {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Tablo Stilleri (önceki adımla aynı, burada tamlık için bulunuyor) */
+.summaryTableContainer {
+  padding: 0;
+}
 
 .summaryTable {
   width: 100%;
@@ -42,21 +151,20 @@
     text-align: right;
 }
 
-/* === YENİ: Renk kodlama stilleri === */
 .bestMetric, .worstMetric {
   font-weight: 700 !important;
   border-radius: 6px;
-  padding: 8px 10px;
-  background-color: transparent;
+  padding: 6px 10px; /* Biraz daha kompakt */
   display: inline-block;
+  background-color: transparent;
 }
 
 .bestMetric {
-  color: #4ade80; /* Tailwind Green 400 */
+  color: #4ade80;
   background-color: color-mix(in srgb, #22c55e 15%, transparent);
 }
 
 .worstMetric {
-  color: #f87171; /* Tailwind Red 400 */
+  color: #f87171;
   background-color: color-mix(in srgb, #ef4444 15%, transparent);
 }
