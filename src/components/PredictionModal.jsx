@@ -14,8 +14,8 @@ function PredictionModal({ model, onClose }) {
 
   // Modelin beklediği temel bilgileri al
   // Eğitim sırasında `results` içinde saklanan `feature_cols`'a erişiyoruz.
-  const featureCols = model.config?.results?.feature_cols || [];
-  const targetCol = model.config?.results?.target_col || (featureCols.length > 0 ? featureCols[0] : 'Bilinmiyor');
+  const featureCols = model.results?.feature_cols || [];
+  const targetCol = model.results?.target_col || (featureCols.length > 0 ? featureCols[0] : 'Bilinmiyor');
   const seqLength = model.config?.model_params?.sequence_length || 60;
 
   const handlePredict = async () => {
