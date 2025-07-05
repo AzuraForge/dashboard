@@ -20,7 +20,7 @@ const safeGet = (obj, path, defaultValue = 'N/A') => {
 
 function ComparisonView({ experiments, title, showCloseButton = false, onClose = () => {} }) {
 
-  const commonChartOptions = (chartTitle, isTimeScale = false) => ({
+  const commonChartOptions = (chartTitle) => ({
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
@@ -153,4 +153,4 @@ ComparisonView.propTypes = {
   onClose: PropTypes.func,
 };
 
-export default ComparisonView;s
+export default ComparisonView;
