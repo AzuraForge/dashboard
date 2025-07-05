@@ -2,17 +2,30 @@ import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, Filler } from 'chart.js'; // Filler import edildi
 import 'chartjs-adapter-date-fns';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import styles from './ComparisonView.module.css';
 
-// ... (ChartJS.register, chartColors, safeGet, analyzeMetrics fonksiyonları aynı kalıyor) ...
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, zoomPlugin);
-const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#7e22ce', '#15803d'];
-const safeGet = (obj, path, defaultValue = 'N/A') => { /* ... no changes ... */ };
-const analyzeMetrics = (experiments, metricPath, mode = 'min') => { /* ... no changes ... */ };
+// Chart.js eklentilerini doğru şekilde kaydet
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, Filler, zoomPlugin);
 
+const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#7e22ce', '#15803d'];
+
+const safeGet = (obj, path, defaultValue = 'N/A') => {
+  if (!obj || typeof path !== 'string') return defaultValue;
+  const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  return value !== undefined && value !== null ? value : defaultValue;
+};
+
+const analyzeMetrics = (experiments, metricPath, mode = 'min') => {
+  const values = experiments.map(exp => ({ id: exp.experiment_id, value: safeGet(exp, metricPath, null) })).filter(item => typeof item.value === 'number');
+  if (values.length < 2) return {}; // Yeterli veri yoksa boş obje dön
+  const sorted = [...values].sort((a, b) => a.value - b.value);
+  const bestId = (mode === 'min') ? sorted[0].id : sorted[sorted.length - 1].id;
+  const worstId = (mode === 'min') ? sorted[sorted.length - 1].id : sorted[0].id;
+  return { best: bestId, worst: worstId };
+};
 
 function ComparisonView({ experiments, title, onClose }) {
 
@@ -33,18 +46,13 @@ function ComparisonView({ experiments, title, onClose }) {
       r2: analyzeMetrics(experiments, 'results.metrics.r2_score', 'max'),
       mae: analyzeMetrics(experiments, 'results.metrics.mae', 'min'),
   }), [experiments]);
-
-  // === DÜZELTME: Grafik etiketleri daha da basitleştirildi ve kısaltıldı ===
+  
   const getExperimentLabel = (exp) => {
     const params = [];
-    // config_summary'den almaya çalış, yoksa ana config'den al
     const lr = safeGet(exp, 'config_summary.lr', safeGet(exp, 'config.training_params.lr', null));
     const hidden = safeGet(exp, 'config.model_params.hidden_size', null);
-    
     if (lr !== null) params.push(`LR:${lr}`);
     if (hidden !== null) params.push(`Hidden:${hidden}`);
-
-    // ID'nin sadece son, daha benzersiz olan kısmını al
     return `...${exp.experiment_id.slice(-12)} (${params.join(', ')})`;
   };
 
@@ -71,7 +79,8 @@ function ComparisonView({ experiments, title, onClose }) {
       data: safeGet(exp, 'results.history.loss', []),
       borderColor: chartColors[i % chartColors.length],
       backgroundColor: `${chartColors[i % chartColors.length]}33`,
-      tension: 0.2, fill: false, borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
+      tension: 0.2, fill: true, // `fill` opsiyonu için Filler plugin'i gerekli
+      borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
     })),
   };
   
@@ -102,17 +111,19 @@ function ComparisonView({ experiments, title, onClose }) {
               </thead>
               <tbody>
                 {experiments.map((exp, i) => {
+                    // === DÜZELTME: Savunmacı kontrol eklendi ===
                     const getCellStyle = (metricName, analysis) => {
+                        // Eğer analysis objesi veya .best özelliği yoksa, boş string dön
+                        if (!analysis || typeof analysis.best === 'undefined') {
+                            return '';
+                        }
                         if (analysis.best === exp.experiment_id) return styles.bestMetric;
                         if (analysis.worst === exp.experiment_id) return styles.worstMetric;
                         return '';
                     };
                     return (
                       <tr key={exp.experiment_id}>
-                        <td>
-                          <span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>
-                          ...{exp.experiment_id.slice(-12)}
-                        </td>
+                        <td><span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>...{exp.experiment_id.slice(-12)}</td>
                         <td className={styles.numericCell}>{safeGet(exp, 'config_summary.lr', 'N/A')}</td>
                         <td className={styles.numericCell}>{safeGet(exp, 'config.model_params.hidden_size', 'N/A')}</td>
                         <td className={`${styles.numericCell} ${getCellStyle('loss', metricAnalysis.loss)}`}>{safeGet(exp, 'results.final_loss', 'N/A').toFixed ? safeGet(exp, 'results.final_loss').toFixed(6) : 'N/A'}</td>
