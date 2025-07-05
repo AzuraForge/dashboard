@@ -1,6 +1,4 @@
-// dashboard/src/components/SingleExperimentChart.jsx
-
-import React, { useMemo, useRef, useContext } from 'react'; // useContext eklendi
+import React, { useMemo, useRef, useContext } from 'react';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
 import { 
@@ -9,67 +7,64 @@ import {
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import zoomPlugin from 'chartjs-plugin-zoom';
-import { ThemeContext } from '../context/ThemeContext'; // ThemeContext import edildi
+import { ThemeContext } from '../context/ThemeContext';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale, zoomPlugin);
 
-// getCssVar fonksiyonuna artık gerek yok. Renkleri doğrudan alacağız.
 const getChartOptions = (title, chartColors, isTimeScale, enableZoom, compactMode) => {
-    // ... (bu fonksiyonun içeriği aynı kalıyor, değişiklik yok)
     const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: {
-      duration: isTimeScale ? 0 : 300, 
-      easing: 'linear'
-    },
-    plugins: {
-      legend: { display: false },
-      title: { display: compactMode, text: title, font: { size: 10, color: chartColors.textColor }, padding: { top: 2, bottom: 4 } },
-      tooltip: {
-        enabled: true,
-        backgroundColor: chartColors.contentBg,
-        titleColor: chartColors.textColor,
-        bodyColor: chartColors.textColor,
-        borderColor: chartColors.border,
-        borderWidth: 1,
-        padding: 6,
-        displayColors: true,
-        callbacks: {
-            label: (ctx) => `${ctx.dataset.label || ''}: ${typeof ctx.parsed.y === 'number' ? ctx.parsed.y.toFixed(4) : ctx.parsed.y}`,
-        }
-      },
-      zoom: {
-        pan: { enabled: enableZoom, mode: 'x', modifierKey: 'alt', },
-        zoom: { wheel: { enabled: enableZoom }, pinch: { enabled: true }, mode: 'x' },
-      }
-    },
-    scales: {
-      y: {
-        grid: { color: chartColors.border, borderDash: [2, 4], drawTicks: false },
-        ticks: { display: !compactMode, padding: 5, maxTicksLimit: 5, font: { size: 10, color: chartColors.textColorDarker } },
-        beginAtZero: false,
-      },
-      x: isTimeScale ? {
-        type: 'time',
-        time: { unit: 'day', tooltipFormat: 'yyyy-MM-dd' },
-        grid: { display: false },
-        ticks: { font: { size: compactMode ? 8 : 10, color: chartColors.textColorDarker }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }
-      } : {
-        grid: { display: false },
-        ticks: { display: !compactMode, padding: 5, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, font: { size: 10, color: chartColors.textColorDarker } },
-      }
-    },
-    layout: { padding: { left: 5, right: 10, top: 5, bottom: 5 } }
-  };
-  return options;
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+            duration: isTimeScale ? 0 : 300, 
+            easing: 'linear'
+        },
+        plugins: {
+            legend: { display: false },
+            title: { display: compactMode, text: title, font: { size: 10, color: chartColors.textColor }, padding: { top: 2, bottom: 4 } },
+            tooltip: {
+                enabled: true,
+                backgroundColor: chartColors.contentBg,
+                titleColor: chartColors.textColor,
+                bodyColor: chartColors.textColor,
+                borderColor: chartColors.border,
+                borderWidth: 1,
+                padding: 6,
+                displayColors: true,
+                callbacks: {
+                    label: (ctx) => `${ctx.dataset.label || ''}: ${typeof ctx.parsed.y === 'number' ? ctx.parsed.y.toFixed(4) : ctx.parsed.y}`,
+                }
+            },
+            zoom: {
+                pan: { enabled: enableZoom, mode: 'x', modifierKey: 'alt', },
+                zoom: { wheel: { enabled: enableZoom }, pinch: { enabled: true }, mode: 'x' },
+            }
+        },
+        scales: {
+            y: {
+                grid: { color: chartColors.border, borderDash: [2, 4], drawTicks: false },
+                ticks: { display: !compactMode, padding: 5, maxTicksLimit: 5, font: { size: 10, color: chartColors.textColorDarker } },
+                beginAtZero: false,
+            },
+            x: isTimeScale ? {
+                type: 'time',
+                time: { unit: 'day', tooltipFormat: 'yyyy-MM-dd' },
+                grid: { display: false },
+                ticks: { font: { size: compactMode ? 8 : 10, color: chartColors.textColorDarker }, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 }
+            } : {
+                grid: { display: false },
+                ticks: { display: !compactMode, padding: 5, maxRotation: 0, autoSkip: true, maxTicksLimit: 7, font: { size: 10, color: chartColors.textColorDarker } },
+            }
+        },
+        layout: { padding: { left: 5, right: 10, top: 5, bottom: 5 } }
+    };
+    return options;
 };
 
 function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
   const chartRef = useRef(null);
-  const { theme } = useContext(ThemeContext); // Temayı context'ten al
+  const { theme } = useContext(ThemeContext);
 
-  // DÜZELTME: Renkleri tema durumuna göre dinamik olarak belirliyoruz
   const chartColors = useMemo(() => {
     const isLightTheme = theme === 'light';
     return {
@@ -77,12 +72,11 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
       info: '#3b82f6',
       error: '#ef4444',
       border: isLightTheme ? '#e2e8f0' : '#334155',
-      textColor: isLightTheme ? '#1e293b' : '#e2e8f0',
-      textColorDarker: isLightTheme ? '#475569' : '#94a3b8',
+      textColor: isLightTheme ? '#1e293b' : '#f1f5f9',
+      textColorDarker: isLightTheme ? '#475569' : '#cbd5e1',
       contentBg: isLightTheme ? '#ffffff' : '#1e293b',
     };
   }, [theme]);
-
 
   const chartData = useMemo(() => {
     if (chartType === 'loss') {
@@ -91,15 +85,27 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
         labels: lossHistory.map((_, i) => `E${i + 1}`),
         datasets: [{
           label: 'Kayıp', data: lossHistory, borderColor: chartColors.primary,
-          backgroundColor: `${chartColors.primary}33`, // Opacity için hex'e 33 ekliyoruz
+          backgroundColor: `${chartColors.primary}33`,
           tension: 0.4, borderWidth: 2, pointRadius: 0, fill: 'origin',
         }]
       };
     }
     if (chartType === 'prediction') {
-      const timeIndex = data?.time_index || [];
-      const yTrue = data?.y_true || [];
-      const yPred = data?.y_pred || [];
+      // === GÜRÜLTÜ AZALTMA İYİLEŞTİRMESİ ===
+      // Grafikte gösterilecek maksimum nokta sayısı
+      const MAX_POINTS = 250; 
+      let timeIndex = data?.time_index || [];
+      let yTrue = data?.y_true || [];
+      let yPred = data?.y_pred || [];
+
+      // Eğer veri canlı değilse ve nokta sayısı limiti aşıyorsa, sadece son N noktayı al
+      if (!isLive && timeIndex.length > MAX_POINTS) {
+          timeIndex = timeIndex.slice(-MAX_POINTS);
+          yTrue = yTrue.slice(-MAX_POINTS);
+          yPred = yPred.slice(-MAX_POINTS);
+      }
+      // === İYİLEŞTİRME SONU ===
+
       return {
         datasets: [
           { label: 'Gerçek', data: yTrue.map((val, i) => ({ x: new Date(timeIndex[i]).getTime(), y: val })), borderColor: chartColors.info, borderWidth: 2, pointRadius: 0, tension: 0.1 },
@@ -108,13 +114,13 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
       };
     }
     return { labels: [], datasets: [] };
-  }, [chartType, data, chartColors]);
+  }, [chartType, data, chartColors, isLive]);
 
   const chartTitle = chartType === 'loss' ? 'Eğitim Kaybı' : 'Tahmin Performansı';
-  const hasData = (chartType === 'loss' && data?.loss?.length > 0) || (chartType === 'prediction' && data?.time_index?.length > 0);
+  const hasData = (chartType === 'loss' && data?.loss?.length > 0) || (chartType === 'prediction' && (data?.time_index?.length > 0 || (data?.y_true?.length > 0 && isLive)));
 
   return (
-    <div className="single-chart-container" style={{ position: 'relative', height: '100%', width: '100%' }}>
+    <div style={{ position: 'relative', height: '100%', width: '100%' }}>
       {hasData ? (
         <Line
           ref={chartRef}
@@ -122,9 +128,11 @@ function SingleExperimentChart({ chartType, data, isLive, enableZoom }) {
           options={getChartOptions(chartTitle, chartColors, chartType === 'prediction', enableZoom, true)}
         />
       ) : (
-        <div className="no-chart-data-message" style={{ /* ... stiller ... */ }}>{isLive ? 'Canlı veri bekleniyor...' : 'Veri mevcut değil.'}</div>
+        <div style={{ display: 'grid', placeContent: 'center', height: '100%', color: 'var(--text-color-darker)', fontSize: '0.8em', fontStyle: 'italic' }}>
+          {isLive ? 'Canlı veri bekleniyor...' : 'Veri mevcut değil.'}
+        </div>
       )}
-      {enableZoom && hasData && <p className="chart-instructions" style={{ /* ... stiller ... */ }}>Yakınlaştır/Sıfırla: Fare tekerleği/Çift tıkla, Kaydır: Alt + Sürükle</p>}
+      {enableZoom && hasData && <p className="chart-instructions">Yakınlaştır/Sıfırla: Fare tekerleği/Çift tıkla, Kaydır: Alt + Sürükle</p>}
     </div>
   );
 }

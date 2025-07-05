@@ -99,8 +99,6 @@ function DynamicFormRenderer({ schema, config, onConfigChange }) {
     );
 }
 DynamicFormRenderer.propTypes = { schema: PropTypes.object, config: PropTypes.object.isRequired, onConfigChange: PropTypes.func.isRequired };
-
-// Artık onClosePanel prop'una ihtiyacımız yok.
 function NewExperimentFormContent({ onExperimentStarted }) { 
     const [pipelines, setPipelines] = useState([]);
     const [selectedPipelineId, setSelectedPipelineId] = useState('');
@@ -174,7 +172,12 @@ function NewExperimentFormContent({ onExperimentStarted }) {
                 <div className="form-group">
                     <label htmlFor="pipeline-select">Çalıştırılacak Pipeline Eklentisi</label>
                     <select id="pipeline-select" value={selectedPipelineId} onChange={(e) => setSelectedPipelineId(e.target.value)} disabled={isLoading || isSubmitting}>
-                        {pipelines.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
+                        {pipelines.map(p => (
+                            <option key={p.id} value={p.id}>
+                                {/* Kullanıcı dostu adı göster, yoksa ID'yi göster */}
+                                {p.name ? `${p.name} (${p.id})` : p.id}
+                            </option>
+                        ))}
                     </select>
                 </div>
                 <div className="form-group">
@@ -192,9 +195,8 @@ function NewExperimentFormContent({ onExperimentStarted }) {
                 </div>
             </div>
             
-            {/* ActionBar yerine doğrudan formun sonuna buton ekliyoruz */}
             <div className={styles.submitContainer}>
-                <button type="submit" disabled={isLoading || isSubmitting || !currentSchema} className="button-primary">
+                <button type="submit" disabled={isLoading || isSubmitting || !currentConfig} className="button-primary">
                     {isSubmitting ? 'Başlatılıyor...' : '🚀 Eğitimi Başlat'}
                 </button>
             </div>
