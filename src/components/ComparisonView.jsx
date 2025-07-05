@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, Filler } from 'chart.js'; // Filler import edildi
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, Filler } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import styles from './ComparisonView.module.css';
@@ -12,6 +12,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#7e22ce', '#15803d'];
 
+// Helper fonksiyonlar
 const safeGet = (obj, path, defaultValue = 'N/A') => {
   if (!obj || typeof path !== 'string') return defaultValue;
   const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
@@ -20,7 +21,7 @@ const safeGet = (obj, path, defaultValue = 'N/A') => {
 
 const analyzeMetrics = (experiments, metricPath, mode = 'min') => {
   const values = experiments.map(exp => ({ id: exp.experiment_id, value: safeGet(exp, metricPath, null) })).filter(item => typeof item.value === 'number');
-  if (values.length < 2) return {}; // Yeterli veri yoksa boş obje dön
+  if (values.length < 2) return {};
   const sorted = [...values].sort((a, b) => a.value - b.value);
   const bestId = (mode === 'min') ? sorted[0].id : sorted[sorted.length - 1].id;
   const worstId = (mode === 'min') ? sorted[sorted.length - 1].id : sorted[0].id;
@@ -56,33 +57,55 @@ function ComparisonView({ experiments, title, onClose }) {
     return `...${exp.experiment_id.slice(-12)} (${params.join(', ')})`;
   };
 
-  const commonChartOptions = (chartTitle) => ({
+  const commonChartOptions = useMemo(() => (chartTitle) => ({
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: { 
-        legend: { position: 'top', labels: { color: 'var(--text-color-darker)', font: { size: 12 }, boxWidth: 15, padding: 20 } },
+        legend: { position: 'top', labels: { color: 'var(--text-color)', font: { size: 12 }, boxWidth: 15, padding: 20 } },
         title: { display: true, text: chartTitle, font: { size: 16, weight: 'bold' }, color: 'var(--text-color)' },
-        tooltip: { backgroundColor: 'var(--content-bg)', borderColor: 'var(--border-color)', borderWidth: 1, titleColor: 'var(--text-color)', bodyColor: 'var(--text-color)', boxPadding: 4, },
+        tooltip: { 
+          backgroundColor: 'var(--content-bg)', 
+          borderColor: 'var(--border-color)', 
+          borderWidth: 1, 
+          titleColor: 'var(--text-color)', 
+          bodyColor: 'var(--text-color)',
+          bodyFont: { family: 'var(--font-mono)'},
+          titleFont: { family: 'var(--font-sans)'},
+          boxPadding: 8,
+          padding: 12,
+        },
         zoom: { pan: { enabled: true, mode: 'x', modifierKey: 'alt' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' } }
       },
       scales: {
-          y: { title: { display: true, text: 'Kayıp Değeri (Loss)', font: { size: 12 }, color: 'var(--text-color-darker)' }, ticks: { color: 'var(--text-color-darker)' }, grid: { color: 'var(--border-color)', borderDash: [2, 4] } }, 
-          x: { title: { display: true, text: 'Epoch', font: { size: 12 }, color: 'var(--text-color-darker)' }, grid: { display: false }, ticks: { color: 'var(--text-color-darker)' }, type: 'category' } 
+          y: { 
+              title: { display: true, text: 'Kayıp Değeri (Loss)', font: { size: 12 }, color: 'var(--text-color-darker)' }, 
+              ticks: { color: 'var(--text-color-darker)' }, 
+              grid: { color: 'var(--border-color)', borderDash: [2, 4] } 
+          }, 
+          x: { 
+              title: { display: true, text: 'Epoch', font: { size: 12 }, color: 'var(--text-color-darker)' }, 
+              grid: { display: false }, 
+              ticks: { color: 'var(--text-color-darker)' }, 
+              type: 'category' 
+          } 
       }
-  });
+  }), []);
 
-  const lossChartData = {
+  const lossChartData = useMemo(() => ({
     labels: Array.from({ length: Math.max(0, ...experiments.map(e => safeGet(e, 'results.history.loss.length', 0))) }, (_, i) => `E${i + 1}`),
     datasets: experiments.map((exp, i) => ({
       label: getExperimentLabel(exp),
       data: safeGet(exp, 'results.history.loss', []),
       borderColor: chartColors[i % chartColors.length],
       backgroundColor: `${chartColors[i % chartColors.length]}33`,
-      tension: 0.2, fill: true, // `fill` opsiyonu için Filler plugin'i gerekli
-      borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
+      tension: 0.2, 
+      fill: true,
+      borderWidth: 2, 
+      pointRadius: 1, 
+      pointHoverRadius: 5,
     })),
-  };
+  }), [experiments]);
   
   return createPortal(
     <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true">
@@ -111,24 +134,24 @@ function ComparisonView({ experiments, title, onClose }) {
               </thead>
               <tbody>
                 {experiments.map((exp, i) => {
-                    // === DÜZELTME: Savunmacı kontrol eklendi ===
-                    const getCellStyle = (metricName, analysis) => {
-                        // Eğer analysis objesi veya .best özelliği yoksa, boş string dön
-                        if (!analysis || typeof analysis.best === 'undefined') {
-                            return '';
-                        }
+                    const getCellStyle = (metricName) => {
+                        const analysis = metricAnalysis[metricName];
+                        if (!analysis || typeof analysis.best === 'undefined') return '';
                         if (analysis.best === exp.experiment_id) return styles.bestMetric;
                         if (analysis.worst === exp.experiment_id) return styles.worstMetric;
                         return '';
                     };
                     return (
                       <tr key={exp.experiment_id}>
-                        <td><span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>...{exp.experiment_id.slice(-12)}</td>
+                        <td className={styles.idCell}>
+                          <span className="color-indicator" style={{backgroundColor: chartColors[i % chartColors.length]}}></span>
+                          ...{exp.experiment_id.slice(-12)}
+                        </td>
                         <td className={styles.numericCell}>{safeGet(exp, 'config_summary.lr', 'N/A')}</td>
                         <td className={styles.numericCell}>{safeGet(exp, 'config.model_params.hidden_size', 'N/A')}</td>
-                        <td className={`${styles.numericCell} ${getCellStyle('loss', metricAnalysis.loss)}`}>{safeGet(exp, 'results.final_loss', 'N/A').toFixed ? safeGet(exp, 'results.final_loss').toFixed(6) : 'N/A'}</td>
-                        <td className={`${styles.numericCell} ${getCellStyle('r2', metricAnalysis.r2)}`}>{safeGet(exp, 'results.metrics.r2_score', 'N/A').toFixed ? safeGet(exp, 'results.metrics.r2_score').toFixed(4) : 'N/A'}</td>
-                        <td className={`${styles.numericCell} ${getCellStyle('mae', metricAnalysis.mae)}`}>{safeGet(exp, 'results.metrics.mae', 'N/A').toFixed ? safeGet(exp, 'results.metrics.mae').toFixed(4) : 'N/A'}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('loss')}`}>{safeGet(exp, 'results.final_loss', 'N/A').toFixed ? safeGet(exp, 'results.final_loss').toFixed(6) : 'N/A'}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('r2')}`}>{safeGet(exp, 'results.metrics.r2_score', 'N/A').toFixed ? safeGet(exp, 'results.metrics.r2_score').toFixed(4) : 'N/A'}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('mae')}`}>{safeGet(exp, 'results.metrics.mae', 'N/A').toFixed ? safeGet(exp, 'results.metrics.mae').toFixed(4) : 'N/A'}</td>
                       </tr>
                     )
                 })}

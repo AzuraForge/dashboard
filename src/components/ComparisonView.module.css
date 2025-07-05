@@ -56,6 +56,7 @@
 .header h2 {
   margin: 0;
   font-size: 1.5em;
+  color: var(--text-color);
 }
 
 .closeButton {
@@ -97,6 +98,7 @@
   font-weight: 600;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border-color);
+  color: var(--text-color);
 }
 
 /* 4. Özet Tablosu Stilleri */
@@ -112,7 +114,7 @@
 
 .summaryTable th,
 .summaryTable td {
-  padding: 12px 15px;
+  padding: 12px 18px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
@@ -126,7 +128,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   position: sticky;
-  top: 0; /* Tablo kaydırıldığında başlıkların sabit kalması için */
+  top: 0;
   background-color: var(--content-bg);
 }
 
@@ -141,6 +143,13 @@
 .summaryTable td {
   font-size: 0.95em;
   font-family: var(--font-mono);
+  color: var(--text-color);
+}
+
+.idCell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 /* 5. Hizalama ve Vurgulama Stilleri */
@@ -155,25 +164,26 @@
 .bestMetric, .worstMetric {
   font-weight: 700 !important;
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   display: inline-block;
 }
 
 .bestMetric {
   background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
-  color: color-mix(in srgb, var(--success-color) 100%, var(--text-color) 0%);
+  color: var(--success-color);
+  border: 1px solid color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 .worstMetric {
   background-color: color-mix(in srgb, var(--error-color) 15%, transparent);
-  color: color-mix(in srgb, var(--error-color) 100%, var(--text-color) 0%);
+  color: var(--error-color);
+  border: 1px solid color-mix(in srgb, var(--error-color) 40%, transparent);
 }
 
 /* Açık temada okunabilirlik için özel renkler */
 .light-theme .bestMetric {
-  color: #14532d; /* Koyu yeşil */
+  color: #14532d; /* Koyu Yeşil */
 }
-
 .light-theme .worstMetric {
-  color: #991b1b; /* Koyu kırmızı */
+  color: #991b1b; /* Koyu Kırmızı */
 }
