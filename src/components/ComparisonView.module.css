@@ -158,3 +158,69 @@
   color: #f87171;
   background-color: color-mix(in srgb, #ef4444 15%, transparent);
 }
+
+/* ... Dosyanın üst kısmı aynı ... */
+
+.summaryTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summaryTable th,
+.summaryTable td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.summaryTable th {
+  color: var(--text-color-darker);
+  font-size: 0.85em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* === DEĞİŞİKLİK: Metrik başlıklarının sağa hizalanmasını sağlıyoruz === */
+.metricHeader {
+  text-align: right;
+}
+
+.summaryTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.summaryTable tbody tr:hover {
+  background-color: var(--hover-bg);
+}
+
+.summaryTable td {
+  font-size: 0.95em;
+  font-family: var(--font-mono);
+}
+
+/* === DEĞİŞİKLİK: Metrik hücrelerinin sağa hizalanmasını sağlıyoruz === */
+.metricCell {
+    text-align: right;
+}
+
+.bestMetric, .worstMetric {
+  font-weight: 700 !important;
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: inline-block;
+  background-color: transparent;
+}
+
+/* === DEĞİŞİKLİK: Koyu tema için daha okunaklı renkler === */
+.bestMetric {
+  color: #4ade80; /* Tailwind Green 400 - Parlak Yeşil */
+  background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
+}
+
+.worstMetric {
+  color: #f87171; /* Tailwind Red 400 - Parlak Kırmızı */
+  background-color: color-mix(in srgb, var(--error-color) 15%, transparent);
+}
