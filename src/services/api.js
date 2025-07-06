@@ -4,7 +4,7 @@ import axios from 'axios';
 // === DEĞİŞİKLİK BURADA: API adresi artık ortam değişkeninden okunuyor ===
 // Vite, .env dosyasındaki VITE_ ile başlayan değişkenleri import.meta.env nesnesine ekler.
 // Eğer değişken tanımlı değilse, yerel geliştirme için varsayılan bir değer kullanırız.
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+export const API_BASE_URL = import.meta.env.API_BASE_URL || 'http://localhost:8000/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
