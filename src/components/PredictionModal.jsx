@@ -1,35 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+
 import { API_BASE_URL } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './PredictionModal.module.css';
-import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
+import { ThemeContext } from '../context/ThemeContext';
+
+// Chart.js bileşenlerini kaydet
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 function PredictionModal({ model, onClose }) {
   const [predictionResult, setPredictionResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const { token } = useAuth();
+  const { theme } = useContext(ThemeContext);
 
   const isTimeSeries = model.pipeline_name.includes('forecaster') || model.pipeline_name.includes('predictor');
 
   const handlePredict = async () => {
     setIsLoading(true);
     setPredictionResult(null);
-
     try {
-      const payload = isTimeSeries ? {} : { data: [] };
-
-      const response = await axios.post(
-        `${API_BASE_URL}/experiments/${model.experiment_id}/predict`, 
-        payload, 
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await axios.post(`${API_BASE_URL}/experiments/${model.experiment_id}/predict`, {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       setPredictionResult(response.data);
     } catch (error) {
       handleApiError(error, "tahmin yapma");
@@ -37,6 +35,51 @@ function PredictionModal({ model, onClose }) {
       setIsLoading(false);
     }
   };
+
+  const { chartData, chartOptions } = useMemo(() => {
+    if (!predictionResult || !predictionResult.history) return { chartData: null, chartOptions: null };
+
+    const isDark = theme === 'dark';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const textColor = isDark ? '#f1f5f9' : '#1e293b';
+    const historyValues = Object.values(predictionResult.history);
+    const labels = Array.from({ length: historyValues.length + 1 }, (_, i) => `T-${historyValues.length - i -1}`).slice(1);
+    labels[labels.length -1] = "Tahmin";
+
+    const data = {
+      labels,
+      datasets: [
+        {
+          label: 'Geçmiş Veri',
+          data: historyValues,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+          tension: 0.1,
+          fill: true,
+        },
+        {
+          label: 'Tahmin',
+          data: [...Array(historyValues.length - 1).fill(null), historyValues[historyValues.length - 1], predictionResult.prediction],
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34, 197, 94, 0.5)',
+          pointRadius: 5,
+          pointBackgroundColor: '#22c55e',
+        }
+      ]
+    };
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid: { color: gridColor }, ticks: { color: textColor } },
+        x: { grid: { color: gridColor }, ticks: { color: textColor } }
+      }
+    };
+
+    return { chartData: data, chartOptions: options };
+  }, [predictionResult, theme]);
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -46,38 +89,33 @@ function PredictionModal({ model, onClose }) {
           <button className={styles.closeButton} onClick={onClose}>×</button>
         </header>
         <div className={styles.body}>
-          {isTimeSeries ? (
-            <p>
-              <b>{model.pipeline_name}</b> modeli, eğitimde kullanılan verilerin sonunu baz alarak 
-              bir sonraki zaman adımını otomatik olarak tahmin edecektir.
-              <br/><br/>
-              Devam etmek için "Tahmin Et" butonuna tıklayın.
-            </p>
-          ) : (
-            <p>
-              Bu model için anlık tahmin özelliği henüz yapılandırılmamıştır.
-            </p>
+          {!predictionResult && (
+            <>
+              <p>
+                <b>{model.pipeline_name}</b> modeli, eğitimde kullanılan verilerin sonunu baz alarak bir sonraki zaman adımını otomatik olarak tahmin edecektir.
+                <br/><br/>Devam etmek için "Tahmin Et" butonuna tıklayın.
+              </p>
+              {isLoading && <p className={styles.loadingText}>Tahmin yapılıyor...</p>}
+            </>
           )}
-
-          {isLoading && <p style={{textAlign: 'center', color: 'var(--text-color-darker)'}}>Tahmin yapılıyor...</p>}
-
-          {/* === DEĞİŞİKLİK BURADA: Sonuç gösterimini dinamik hale getiriyoruz === */}
-          {predictionResult && (
-            <div className={styles.result}>
-              <p>Modelin Bir Sonraki Adım İçin Tahmini ({predictionResult.target_col || 'Değer'})</p>
-              <div className={styles.predictionValue}>
-                {(predictionResult.prediction || 0).toFixed(4)}
+          
+          {predictionResult && chartData && (
+            <div className={styles.resultContainer}>
+              <div className={styles.resultHeader}>
+                <p>Modelin Tahmini ({predictionResult.target_col || 'Değer'})</p>
+                <div className={styles.predictionValue}>
+                  {predictionResult.prediction.toFixed(4)}
+                </div>
+              </div>
+              <div className={styles.chartContainer}>
+                <Line options={chartOptions} data={chartData} />
               </div>
             </div>
           )}
         </div>
         <footer className={styles.footer}>
           <button className={styles.buttonSecondary} onClick={onClose} disabled={isLoading}>İptal</button>
-          <button 
-            className="button-primary" 
-            onClick={handlePredict} 
-            disabled={isLoading || !isTimeSeries}
-          >
+          <button className="button-primary" onClick={handlePredict} disabled={isLoading || !isTimeSeries}>
             {isLoading ? 'Hesaplanıyor...' : 'Tahmin Et'}
           </button>
         </footer>
