@@ -1,9 +1,7 @@
-// ========== DOSYA: dashboard/src/components/PredictionModal.jsx ==========
 import React, { useState, useMemo, useContext, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale } from 'chart.js';
-import { de } from 'date-fns/locale'; // Sadece adapter için gerekli
 import 'chartjs-adapter-date-fns';
 
 import { predictFromExperiment } from '../services/api';
@@ -12,7 +10,6 @@ import styles from './PredictionModal.module.css';
 import { ThemeContext } from '../context/ThemeContext';
 import LoadingSpinner from './LoadingSpinner';
 
-// Chart.js bileşenlerini ve zaman adaptörünü kaydet
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale);
 
 function PredictionModal({ model, onClose }) {
@@ -24,9 +21,8 @@ function PredictionModal({ model, onClose }) {
 
   const handlePredict = async () => {
     setIsLoading(true);
-    setPredictionResult(null); // Yeni tahmin için eski sonucu temizle
+    setPredictionResult(null);
     try {
-      // Zaman serisi modelleri için payload boş gönderilir, worker en son veriyi kullanır.
       const payload = isTimeSeries ? {} : { data: [] };
       const response = await predictFromExperiment(model.experiment_id, payload);
       setPredictionResult(response.data);
@@ -37,10 +33,9 @@ function PredictionModal({ model, onClose }) {
     }
   };
   
-  // Modal ilk açıldığında tahmini otomatik başlat
   useEffect(() => {
     handlePredict();
-  }, [model.experiment_id]); // Sadece model değiştiğinde tekrar çalışır
+  }, [model.experiment_id]);
 
   const { chartData, chartOptions } = useMemo(() => {
     if (!predictionResult || !predictionResult.history) return { chartData: null, chartOptions: null };
@@ -49,7 +44,7 @@ function PredictionModal({ model, onClose }) {
     const gridColor = isDark ? '#334155' : '#e2e8f0';
     const textColor = isDark ? '#f1f5f9' : '#1e293b';
     
-    // === GRAFİK MANTIĞI DÜZELTMESİ: Gerçek zaman serisi verisi kullanımı ===
+    // --- GRAFİK MANTIĞI DÜZELTMESİ: Daha basit ve sağlam veri işleme ---
     const historyEntries = Object.entries(predictionResult.history);
     const MAX_POINTS = 50;
     const displayHistory = historyEntries.slice(-MAX_POINTS);
@@ -57,8 +52,10 @@ function PredictionModal({ model, onClose }) {
     if (displayHistory.length === 0) return { chartData: null, chartOptions: null };
 
     const lastHistoryEntry = displayHistory[displayHistory.length - 1];
+    
+    // Gelen string tarihi doğrudan Date nesnesine çeviriyoruz
     const lastDate = new Date(lastHistoryEntry[0]);
-    // Veri aralığını hesapla (varsayılan 1 gün)
+    
     const interval = displayHistory.length > 1 
       ? new Date(displayHistory[1][0]).getTime() - new Date(displayHistory[0][0]).getTime()
       : 24 * 60 * 60 * 1000;
@@ -69,6 +66,7 @@ function PredictionModal({ model, onClose }) {
       datasets: [
         {
           label: 'Geçmiş Veri',
+          // Gelen string tarihi doğrudan Date nesnesine çeviriyoruz
           data: displayHistory.map(([dateStr, value]) => ({ x: new Date(dateStr).getTime(), y: value })),
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.2)',
@@ -131,9 +129,9 @@ function PredictionModal({ model, onClose }) {
           {isLoading && <LoadingSpinner message="Tahmin hesaplanıyor..." />}
           
           {!isLoading && !predictionResult && (
-             <p className={styles.infoText}>
-                <b>{model.pipeline_name}</b> modeli için tahmin sonucu alınamadı.
-             </p>
+             <div className="card" style={{ textAlign: 'center', padding: '2rem', borderStyle: 'dashed' }}>
+                <p><b>{model.pipeline_name}</b> modeli için tahmin sonucu alınamadı.</p>
+             </div>
           )}
 
           {!isLoading && predictionResult && chartData && (
@@ -152,7 +150,7 @@ function PredictionModal({ model, onClose }) {
         </div>
 
         <footer className={styles.footer}>
-          <button className={styles.buttonSecondary} onClick={onClose} disabled={isLoading}>Kapat</button>
+          <button className="button-secondary" onClick={onClose} disabled={isLoading}>Kapat</button>
           <button className="button-primary" onClick={handlePredict} disabled={isLoading || !isTimeSeries}>
             {isLoading ? 'Hesaplanıyor...' : 'Yeniden Tahmin Et'}
           </button>
