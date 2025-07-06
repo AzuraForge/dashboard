@@ -1,7 +1,6 @@
-// dashboard/src/services/api.js
+// ========== DOSYA: dashboard/src/services/api.js ==========
 import axios from 'axios';
 
-// === DEĞİŞİKLİK BURADA: API adresi artık ortam değişkeninden okunuyor ===
 // Vite, .env dosyasındaki VITE_ ile başlayan değişkenleri import.meta.env nesnesine ekler.
 // Eğer değişken tanımlı değilse, yerel geliştirme için varsayılan bir değer kullanırız.
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
@@ -23,11 +22,11 @@ export const loginUser = (username, password) => {
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
-    // loginUser endpoint'inin tam yolu baseURL'e göre değil, kök domaine göre olmalı.
-    // baseURL /api/v1 içerdiği için, /auth/token'e gitmek için yolu düzeltmeliyiz.
-    const loginUrl = `${API_BASE_URL.replace('/api/v1', '')}/auth/token`;
-
-    return axios.post(loginUrl, formData, {
+    
+    // === DÜZELTME: Hatalı URL oluşturma mantığı kaldırıldı ===
+    // Artık merkezi apiClient'ı kullanıyoruz. Axios, baseURL olan '.../api/v1' ile
+    // aşağıdaki '/auth/token' yolunu doğru bir şekilde birleştirecektir.
+    return apiClient.post('/auth/token', formData, {
         headers: { 
             'Content-Type': 'application/x-www-form-urlencoded'
         },
@@ -35,8 +34,9 @@ export const loginUser = (username, password) => {
 };
 
 export const registerUser = (username, password) => {
-    const registerUrl = `${API_BASE_URL.replace('/api/v1', '')}/auth/register`;
-    return axios.post(registerUrl, { username, password });
+    // === DÜZELTME: Hatalı URL oluşturma mantığı kaldırıldı ===
+    // Artık merkezi apiClient'ı kullanıyoruz.
+    return apiClient.post('/auth/register', { username, password });
 };
 
 // Diğer API fonksiyonları apiClient'i kullandığı için
@@ -49,7 +49,6 @@ export const fetchExperimentDetails = (experimentId) => apiClient.get(`/experime
 export const fetchReportContent = (experimentId) => apiClient.get(`/experiments/${experimentId}/report/content`);
 
 // Tahmin endpoint'i de apiClient'i kullanacak şekilde düzenlenmeli.
-// PredictionModal.jsx içinde doğrudan URL oluşturmak yerine, buradan çağırmak daha doğru.
 export const predictFromExperiment = (experimentId, payload) => {
     return apiClient.post(`/experiments/${experimentId}/predict`, payload);
 };
