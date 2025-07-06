@@ -1,26 +1,29 @@
-# Node.js LTS sürümünü Alpine Linux üzerinde kullan
-FROM node:22-alpine AS dashboard_builder
+# DOSYA: dashboard/Dockerfile
+# Node.js LTS sürümünü Alpine Linux üzerinde kullanıyoruz. Alpine, küçük ve güvenli olduğu için idealdir.
+FROM node:22-alpine
 
 # Çalışma dizinini ayarla
 WORKDIR /app
 
-# package.json ve package-lock.json dosyalarını kopyala
-COPY package.json package-lock.json ./
+# Önce SADECE package.json dosyasını kopyala. package-lock.json'ı kopyalama.
+# Docker'ın katman önbellekleme (layer caching) özelliğinden faydalanmak için
+# en az değişen dosyaları en başa koyarız.
+COPY package.json ./
 
-# package-lock.json dosyasını sil (npm'in kendi ortamına uygun olarak yeniden oluşturması için)
-RUN rm -f package-lock.json
-
-# npm cache temizle
-RUN npm cache clean --force
-
-# Bağımlılıkları yükle (container ortamında)
+# KRİTİK ADIM: Bağımlılıkları konteyner içinde, sıfırdan kur.
+# Bu, npm'in konteynerin Alpine Linux ortamına uygun binary'leri
+# (örn: @rollup/rollup-linux-x64-musl) indirmesini ve doğru bir
+# package-lock.json oluşturmasını garanti eder.
+# --verbose flag'ı, olası hataları görmek için eklenmiştir.
 RUN npm install --verbose
 
-# Uygulama kodunu kopyala
+# Bağımlılıklar kurulduktan sonra, geri kalan tüm uygulama kodunu kopyala.
+# Bu, kodda yaptığınız her değişiklikte 'npm install' adımının tekrar çalışmasını engeller.
 COPY . .
 
-# Vite geliştirme sunucusunu başlatmak için komut
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
-
-# Dashboard servisi 5173 portunda çalışır
+# Dashboard servisi 5173 portunda çalışacak
 EXPOSE 5173
+
+# Vite geliştirme sunucusunu başlatmak için varsayılan komut.
+# Bu, docker-compose.yml'de override edilebilir ama burada olması iyi bir pratiktir.
+CMD ["npm", "run", "dev"]
