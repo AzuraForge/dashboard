@@ -4,7 +4,9 @@ import { toast } from 'react-toastify';
 import SingleExperimentChart from './SingleExperimentChart';
 import styles from './ExperimentCard.module.css';
 
-// --- YENİ: İkonlar burada merkezi olarak tanımlanıyor ---
+// === DEĞİŞİKLİK: WebSocket URL'sini ortam değişkeninden alıyoruz ===
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000/ws';
+
 const ICONS = {
     copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
     report: "M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
@@ -15,7 +17,6 @@ Icon.propTypes = { path: PropTypes.string.isRequired, className: PropTypes.strin
 
 function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) {
     const [actionsOpen, setActionsOpen] = useState(false);
-    // --- YENİ: Kartın genişletilip genişletilmediğini tutan state ---
     const [isExpanded, setIsExpanded] = useState(false);
 
     const {
@@ -32,7 +33,10 @@ function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) {
 
     useEffect(() => {
         if (!isRunning || !task_id) return;
-        const socket = new WebSocket(`ws://localhost:8000/ws/task_status/${task_id}`);
+        
+        // === DEĞİŞİKLİK: Dinamik WebSocket URL'si kullanılıyor ===
+        const socket = new WebSocket(`${WS_BASE_URL}/task_status/${task_id}`);
+
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.state === 'PROGRESS' && data.details) {
@@ -70,18 +74,15 @@ function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) {
     };
 
     const handleExpandToggle = (e) => {
-        // Checkbox, actions butonu veya menüsü dışındaki tıklamalar için genişlet/daralt
         if (!e.target.closest(`.${styles.checkboxStatus}`) && !e.target.closest(`.${styles.actionsCell}`)) {
             setIsExpanded(!isExpanded);
         }
     };
 
-    // --- DEĞİŞİKLİK: Class'lar artık state'e göre dinamik olarak atanıyor ---
     const cardClasses = `${styles.card} ${isSelected ? styles.selectedCard : ''} ${isExpanded ? styles.expandedCard : ''}`;
   
     return (
         <div className={cardClasses}>
-            {/* Tıklanabilir başlık alanı */}
             <div className={styles.header} onClick={handleExpandToggle}>
                 <div className={styles.checkboxStatus}>
                     <input type="checkbox" checked={isSelected} onChange={onSelect} title="Karşılaştırmak için seç" onClick={e => e.stopPropagation()} />
@@ -105,12 +106,10 @@ function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) {
                             {isSuccess && <button onClick={() => { onShowReport(experiment_id); setActionsOpen(false); }}><Icon path={ICONS.report} /> Raporu Görüntüle</button>}
                         </div>
                     )}
-                    {/* --- YENİ: Genişletme ikonu --- */}
                     <Icon path={ICONS.chevron} className={styles.expandIcon} />
                 </div>
             </div>
 
-            {/* --- YENİ: Canlı ilerleme çubuğu ayrı bir bölümde --- */}
             {isRunning && (
                 <div className={styles.liveProgressBarSection}>
                     <div className={styles.progressHeader}>
@@ -121,13 +120,11 @@ function ExperimentCard({ experiment, isSelected, onSelect, onShowReport }) {
                 </div>
             )}
 
-            {/* --- YENİ: Genişletilebilir içerik alanı --- */}
             <div className={styles.collapsibleContent}>
                 <div className={styles.chartsSection}>
                     <SingleExperimentChart chartType="loss" data={isRunning ? liveData : results} isLive={isRunning} enableZoom={!isRunning} />
                     <SingleExperimentChart chartType="prediction" data={isRunning ? liveData : results} isLive={isRunning} enableZoom={!isRunning} />
                 </div>
-                {/* İleride buraya daha fazla detay eklenebilir */}
             </div>
         </div>
     );
