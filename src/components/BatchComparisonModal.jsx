@@ -1,8 +1,8 @@
-// DOSYA: dashboard/src/components/BatchComparisonModal.jsx
 import React, { useMemo, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import Plot from 'react-plotly.js';
+import { get, isObject } from 'lodash';
 import { ThemeContext } from '../context/ThemeContext';
 import styles from './ComparisonView.module.css'; // Mevcut modal stilini kullanabiliriz
 
@@ -28,22 +28,24 @@ function BatchComparisonModal({ experiments, title, onClose }) {
     const varyingParams = new Set();
     const baseConfig = experiments[0].config;
 
+    // Sadece training_params ve model_params içindeki değişiklikleri ara
+    const paramSections = ['training_params', 'model_params'];
+    
     for (const exp of experiments.slice(1)) {
-      for (const key in exp.config.training_params) {
-        if (exp.config.training_params[key] !== baseConfig.training_params[key]) {
-          varyingParams.add(`training_params.${key}`);
+        for (const section of paramSections) {
+            if (isObject(exp.config[section]) && isObject(baseConfig[section])) {
+                for (const key in exp.config[section]) {
+                    if (get(exp.config, `${section}.${key}`) !== get(baseConfig, `${section}.${key}`)) {
+                        varyingParams.add(`${section}.${key}`);
+                    }
+                }
+            }
         }
-      }
-      for (const key in exp.config.model_params) {
-        if (exp.config.model_params[key] !== baseConfig.model_params[key]) {
-          varyingParams.add(`model_params.${key}`);
-        }
-      }
     }
     
     const dimensions = Array.from(varyingParams).map(path => ({
-      label: path.split('.').pop(), // Örneğin 'lr' veya 'hidden_size'
-      values: experiments.map(exp => exp.config[path.split('.')[0]][path.split('.')[1]])
+      label: path.split('.').pop(),
+      values: experiments.map(exp => get(exp.config, path))
     }));
 
     // Performans metriklerini ekle
@@ -54,11 +56,8 @@ function BatchComparisonModal({ experiments, title, onClose }) {
     ];
 
     metrics.forEach(metric => {
-      const values = experiments.map(exp => {
-        const value = metric.key.split('.').reduce((obj, key) => obj && obj[key], exp);
-        return typeof value === 'number' ? value : null;
-      });
-      if (values.some(v => v !== null)) {
+      const values = experiments.map(exp => get(exp, metric.key, null));
+      if (values.some(v => typeof v === 'number')) {
         dimensions.push({ label: metric.label, values });
       }
     });
@@ -85,7 +84,7 @@ function BatchComparisonModal({ experiments, title, onClose }) {
     }];
     
     const layout = {
-      title: 'Hiperparametre ve Metrik Karşılaştırması',
+      title: 'Hiperparametre ve Metrik Analizi',
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
       font: {
@@ -99,13 +98,13 @@ function BatchComparisonModal({ experiments, title, onClose }) {
   
   return createPortal(
     <div className={styles.modalOverlay} onClick={onClose} role="dialog" aria-modal="true">
-      <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+      <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '1200px' }}>
         <header className={styles.header}>
           <h2>{title} ({experiments.length} adet)</h2>
           <button className={styles.closeButton} onClick={onClose} aria-label="Kapat">×</button>
         </header>
-        <div className={styles.body} style={{ display: 'grid', placeContent: 'center' }}>
-          {plotData.length > 0 ? (
+        <div className={styles.body} style={{ display: 'grid', placeContent: 'stretch', padding: '10px' }}>
+          {plotData.length > 0 && plotData[0].dimensions.length > 1 ? (
             <Plot
               data={plotData}
               layout={plotLayout}
@@ -113,7 +112,7 @@ function BatchComparisonModal({ experiments, title, onClose }) {
               useResizeHandler={true}
               config={{ responsive: true }}
             />
-          ) : <p>Karşılaştırma için yeterli veri bulunamadı.</p>}
+          ) : <p style={{textAlign: 'center', padding: '2rem'}}>Analiz için yeterli değişen parametre veya metrik bulunamadı.</p>}
         </div>
       </div>
     </div>,

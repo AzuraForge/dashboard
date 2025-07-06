@@ -1,4 +1,3 @@
-// DOSYA: dashboard/src/components/BatchCard.jsx
 import React, { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import ExperimentCard from './ExperimentCard';
