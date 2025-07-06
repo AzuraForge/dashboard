@@ -1,5 +1,3 @@
-// dashboard/src/components/PredictionModal.jsx
-
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
@@ -7,14 +5,15 @@ import { API_BASE_URL } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './PredictionModal.module.css';
 import { toast } from 'react-toastify';
+// === DEĞİŞİKLİK BURADA: Yetkilendirme için useAuth'u import ediyoruz ===
 import { useAuth } from '../context/AuthContext';
 
 function PredictionModal({ model, onClose }) {
   const [predictionResult, setPredictionResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { token } = useAuth(); // Kimlik doğrulama için token'ı al
+  // === DEĞİŞİKLİK BURADA: Auth context'ten token'ı alıyoruz ===
+  const { token } = useAuth();
 
-  // Modelin zaman serisi olup olmadığını kontrol et
   const isTimeSeries = model.pipeline_name.includes('forecaster') || model.pipeline_name.includes('predictor');
 
   const handlePredict = async () => {
@@ -22,15 +21,18 @@ function PredictionModal({ model, onClose }) {
     setPredictionResult(null);
 
     try {
-      // Zaman serisi modelleri için artık boş bir body gönderiyoruz.
-      // Diğer modeller için (eğer ileride eklenirse) veri gerekebilir.
       const payload = isTimeSeries ? {} : { data: [] };
 
-      const response = await axios.post(`${API_BASE_URL}/experiments/${model.experiment_id}/predict`, payload, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      // === DEĞİŞİKLİK BURADA: API çağrısına Authorization başlığını ekliyoruz ===
+      const response = await axios.post(
+        `${API_BASE_URL}/experiments/${model.experiment_id}/predict`, 
+        payload, 
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         }
-      });
+      );
       setPredictionResult(response.data);
     } catch (error) {
       handleApiError(error, "tahmin yapma");
@@ -90,10 +92,5 @@ PredictionModal.propTypes = {
   model: PropTypes.object.isRequired,
   onClose: PropTypes.func.isRequired,
 };
-
-// API çağrısında Auth header'ı gönderebilmek için useAuth hook'unu import ettik.
-// Bu yüzden PredictionModal'ı çağıran yere (ModelRegistry.jsx) AuthProvider
-// kapsamında olduğundan emin olmalıyız. Zaten App.jsx'te tüm uygulama
-// AuthProvider ile sarmalanmış durumda, bu yüzden ek bir değişiklik gerekmiyor.
 
 export default PredictionModal;
