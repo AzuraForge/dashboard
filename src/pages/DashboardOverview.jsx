@@ -11,10 +11,9 @@ import { fetchExperiments } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './DashboardOverview.module.css';
 
-// ... (FloatingCompareButton ve ComparisonBasket bileşenleri aynı kalıyor) ...
 function FloatingCompareButton({ count, onClick }) { if (count < 1) return null; return ( <button className={styles.floatingCompareButton} onClick={onClick}> <span role="img" aria-label="compare">🔀</span> Karşılaştır ({count}) </button> ); }
 FloatingCompareButton.propTypes = { count: PropTypes.number.isRequired, onClick: PropTypes.func.isRequired, };
-function ComparisonBasket({ selectedExperiments, onStartComparison, onClear, onRemove }) { return ( <div className={styles.basket}> <h3 className={styles.basketTitle}>Karşılaştırma Sepeti</h3> {selectedExperiments.length === 0 ? ( <p className={styles.basketEmpty}>Karşılaştırmak için deneyler seçin.</p> ) : ( <> <ul className={styles.basketList}> {selectedExperiments.map(exp => ( <li key={exp.experiment_id}> <div className={styles.basketItemInfo}> {exp.pipeline_name} <span>ID: {exp.experiment_id.slice(0, 8)}...</span> </div> <button onClick={() => onRemove(exp.experiment_id)} className={styles.basketItemRemove}>×</button> </li> ))} </ul> <div className={styles.basketActions}> <button className={styles.clearButton} onClick={onClear}>Tümünü Temizle</button> <button className="button-primary" onClick={onStartComparison} disabled={selectedExperiments.length < 2} > Karşılaştır ({selectedExperiments.length}) </button> </div> </> )} </div> ); }
+function ComparisonBasket({ selectedExperiments, onStartComparison, onClear, onRemove }) { return ( <div className={styles.basket}> <h3 className={styles.basketTitle}>Karşılaştırma Sepeti</h3> {selectedExperiments.length === 0 ? ( <p className={styles.basketEmpty}>Karşılaştırmak için deneyler seçin.</p> ) : ( <> <ul className={styles.basketList}> {selectedExperiments.map(exp => ( <li key={exp.experiment_id}> <div className={styles.basketItemInfo}> {exp.pipeline_name} <span>ID: ...{exp.experiment_id.slice(-8)}</span> </div> <button onClick={() => onRemove(exp.experiment_id)} className={styles.basketItemRemove}>×</button> </li> ))} </ul> <div className={styles.basketActions}> <button className={styles.clearButton} onClick={onClear}>Tümünü Temizle</button> <button className="button-primary" onClick={onStartComparison} disabled={selectedExperiments.length < 2} > Karşılaştır ({selectedExperiments.length}) </button> </div> </> )} </div> ); }
 ComparisonBasket.propTypes = { selectedExperiments: PropTypes.array.isRequired, onStartComparison: PropTypes.func.isRequired, onClear: PropTypes.func.isRequired, onRemove: PropTypes.func.isRequired, };
 
 
@@ -25,15 +24,10 @@ function DashboardOverview() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
   
-  // === DEĞİŞİKLİK: Modal state yönetimini ayırıyoruz ===
-  const [isComparisonModalOpen, setIsComparisonModalOpen] = useState(false);
-  const [comparisonModalData, setComparisonModalData] = useState({ experiments: [], title: '' });
-  // === DEĞİŞİKLİK SONU ===
-
-  const [viewingReportId, setViewingReportId] = useState(null);
+  // İYİLEŞTİRME: Tüm modal state'leri tek bir nesnede birleştiriyoruz.
+  const [modalState, setModalState] = useState({ type: null, data: null });
 
   useEffect(() => {
-    // ... (veri çekme useEffect'i aynı kalıyor) ...
     let isMounted = true;
     const loadExperiments = async (showLoadingIndicator) => {
       if (showLoadingIndicator) setLoading(true);
@@ -49,9 +43,7 @@ function DashboardOverview() {
           setError('API sunucusuna bağlanılamadı veya veri çekilemedi.');
         }
       } finally {
-        if (isMounted && showLoadingIndicator) {
-          setLoading(false);
-        }
+        if (isMounted && showLoadingIndicator) setLoading(false);
       }
     };
     loadExperiments(true);
@@ -96,19 +88,18 @@ function DashboardOverview() {
     return [...sortedBatches, ...singleExperiments];
   }, [experiments, searchTerm, selectedForComparison]);
 
-  // === DEĞİŞİKLİK: Modal açma fonksiyonları birleştirildi ===
-  const openComparisonModal = (experiments, title) => {
-    if (experiments.length < 2 && title.includes("Seçilen")) {
+  const openComparisonModal = (experimentsToCompare, title) => {
+    if (experimentsToCompare.length < 2) {
       toast.warn('Karşılaştırma için en az 2 deney seçmelisiniz.');
       return;
     }
-    setComparisonModalData({ experiments, title });
-    setIsComparisonModalOpen(true);
+    setModalState({ type: 'comparison', data: { experiments: experimentsToCompare, title } });
   };
   
   const handleStartManualComparison = () => openComparisonModal(comparisonData, "Seçilen Deneylerin Karşılaştırması");
   const handleStartBatchComparison = (batchExperiments) => openComparisonModal(batchExperiments, "Deney Grubu Sonuçları");
-  // === DEĞİŞİKLİK SONU ===
+  const openReportModal = (experimentId) => setModalState({ type: 'report', data: { experimentId } });
+  const closeModal = () => setModalState({ type: null, data: null });
 
   const handleClearComparison = useCallback(() => { setSelectedForComparison(new Set()); }, []);
   if (loading) return <LoadingSpinner message="Deneyler yükleniyor..." />;
@@ -116,14 +107,12 @@ function DashboardOverview() {
 
   return (
     <>
-      {isComparisonModalOpen && (
-        <ComparisonView
-          experiments={comparisonModalData.experiments}
-          title={comparisonModalData.title}
-          onClose={() => setIsComparisonModalOpen(false)}
-        />
+      {modalState.type === 'comparison' && (
+        <ComparisonView {...modalState.data} onClose={closeModal} />
       )}
-      {viewingReportId && <ReportModal experimentId={viewingReportId} onClose={() => setViewingReportId(null)} />}
+      {modalState.type === 'report' && (
+        <ReportModal {...modalState.data} onClose={closeModal} />
+      )}
       
       <FloatingCompareButton count={comparisonData.length} onClick={handleStartManualComparison} />
       
@@ -141,8 +130,8 @@ function DashboardOverview() {
               {groupedAndFilteredExperiments.length > 0 ? (
                   groupedAndFilteredExperiments.map((item) => (
                       item.batch_id 
-                      ? <BatchCard key={item.batch_id} batch={item} onSelect={handleComparisonSelect} onShowReport={setViewingReportId} onShowBatchComparison={handleStartBatchComparison} />
-                      : <ExperimentCard key={item.experiment_id} experiment={item} isSelected={item.isSelected} onSelect={() => handleComparisonSelect(item.experiment_id)} onShowReport={setViewingReportId}/>
+                      ? <BatchCard key={item.batch_id} batch={item} onSelect={handleComparisonSelect} onShowReport={openReportModal} onShowBatchComparison={handleStartBatchComparison} />
+                      : <ExperimentCard key={item.experiment_id} experiment={item} isSelected={item.isSelected} onSelect={() => handleComparisonSelect(item.experiment_id)} onShowReport={openReportModal}/>
                   ))
               ) : (
                 <div className="card" style={{textAlign: 'center', padding: '2rem'}}>

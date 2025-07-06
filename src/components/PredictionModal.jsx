@@ -1,16 +1,18 @@
 // ========== DOSYA: dashboard/src/components/PredictionModal.jsx ==========
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useMemo, useContext, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale } from 'chart.js';
+import { de } from 'date-fns/locale'; // Sadece adapter için gerekli
 import 'chartjs-adapter-date-fns';
 
 import { predictFromExperiment } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './PredictionModal.module.css';
 import { ThemeContext } from '../context/ThemeContext';
+import LoadingSpinner from './LoadingSpinner';
 
-// Chart.js bileşenlerini kaydet
+// Chart.js bileşenlerini ve zaman adaptörünü kaydet
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TimeScale);
 
 function PredictionModal({ model, onClose }) {
@@ -22,8 +24,9 @@ function PredictionModal({ model, onClose }) {
 
   const handlePredict = async () => {
     setIsLoading(true);
-    setPredictionResult(null);
+    setPredictionResult(null); // Yeni tahmin için eski sonucu temizle
     try {
+      // Zaman serisi modelleri için payload boş gönderilir, worker en son veriyi kullanır.
       const payload = isTimeSeries ? {} : { data: [] };
       const response = await predictFromExperiment(model.experiment_id, payload);
       setPredictionResult(response.data);
@@ -33,6 +36,11 @@ function PredictionModal({ model, onClose }) {
       setIsLoading(false);
     }
   };
+  
+  // Modal ilk açıldığında tahmini otomatik başlat
+  useEffect(() => {
+    handlePredict();
+  }, [model.experiment_id]); // Sadece model değiştiğinde tekrar çalışır
 
   const { chartData, chartOptions } = useMemo(() => {
     if (!predictionResult || !predictionResult.history) return { chartData: null, chartOptions: null };
@@ -41,20 +49,27 @@ function PredictionModal({ model, onClose }) {
     const gridColor = isDark ? '#334155' : '#e2e8f0';
     const textColor = isDark ? '#f1f5f9' : '#1e293b';
     
-    // === DÜZELTME BAŞLANGICI: Tarih anahtarlarını ve değerlerini doğru kullanma ===
+    // === GRAFİK MANTIĞI DÜZELTMESİ: Gerçek zaman serisi verisi kullanımı ===
     const historyEntries = Object.entries(predictionResult.history);
     const MAX_POINTS = 50;
     const displayHistory = historyEntries.slice(-MAX_POINTS);
     
+    if (displayHistory.length === 0) return { chartData: null, chartOptions: null };
+
     const lastHistoryEntry = displayHistory[displayHistory.length - 1];
+    const lastDate = new Date(lastHistoryEntry[0]);
+    // Veri aralığını hesapla (varsayılan 1 gün)
+    const interval = displayHistory.length > 1 
+      ? new Date(displayHistory[1][0]).getTime() - new Date(displayHistory[0][0]).getTime()
+      : 24 * 60 * 60 * 1000;
+      
+    const predictionDate = new Date(lastDate.getTime() + interval);
     
     const data = {
-      // labels'ı artık kullanmıyoruz, Chart.js veriden alacak
       datasets: [
         {
           label: 'Geçmiş Veri',
-          // Veriyi {x: tarih, y: değer} formatında veriyoruz
-          data: displayHistory.map(([dateStr, value]) => ({ x: new Date(dateStr), y: value })),
+          data: displayHistory.map(([dateStr, value]) => ({ x: new Date(dateStr).getTime(), y: value })),
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.2)',
           tension: 0.2,
@@ -63,15 +78,14 @@ function PredictionModal({ model, onClose }) {
         },
         {
           label: 'Tahmin',
-          // Son geçmiş noktası ile tahmin noktasını birleştiren bir çizgi
           data: [
-            { x: new Date(lastHistoryEntry[0]), y: lastHistoryEntry[1] },
-            // Tahmin noktasının x değerini, son geçmiş noktasından bir sonraki zaman adımı olarak tahmin ediyoruz (örn. 1 gün sonrası)
-            { x: new Date(new Date(lastHistoryEntry[0]).getTime() + (24 * 60 * 60 * 1000)), y: predictionResult.prediction }
+            { x: lastDate.getTime(), y: lastHistoryEntry[1] },
+            { x: predictionDate.getTime(), y: predictionResult.prediction }
           ],
           borderColor: '#22c55e',
           pointRadius: 5,
           pointBackgroundColor: '#22c55e',
+          borderWidth: 2,
           type: 'line',
         }
       ]
@@ -82,23 +96,25 @@ function PredictionModal({ model, onClose }) {
       maintainAspectRatio: false,
       plugins: { 
         legend: { display: true, position: 'bottom', labels: { color: textColor, boxWidth: 12, padding: 15 } },
-        tooltip: { /* Tooltip ayarları aynı kalabilir */ }
+        tooltip: {
+            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+            titleColor: textColor,
+            bodyColor: textColor,
+        }
       },
       scales: {
         y: { 
-            grid: { color: gridColor, borderDash: [2, 4], drawTicks: false }, 
+            grid: { color: gridColor, borderDash: [2, 4] }, 
             ticks: { color: textColor, padding: 10 } 
         },
-        // === DÜZELTME: x eksenini zaman serisi olarak ayarlıyoruz ===
         x: { 
             type: 'time',
-            time: { unit: 'day', tooltipFormat: 'PPp', displayFormats: { day: 'MMM d' } },
+            time: { unit: 'day', tooltipFormat: 'PP', displayFormats: { day: 'MMM d' } },
             grid: { display: false }, 
             ticks: { color: textColor, font: { size: 10 }, maxRotation: 0, autoSkip: true } 
         }
       }
     };
-    // === DÜZELTME SONU ===
 
     return { chartData: data, chartOptions: options };
   }, [predictionResult, theme]);
@@ -110,18 +126,17 @@ function PredictionModal({ model, onClose }) {
           <h2>Anlık Tahmin</h2>
           <button className={styles.closeButton} onClick={onClose}>×</button>
         </header>
+
         <div className={styles.body}>
-          {!predictionResult && (
-            <>
-              <p>
-                <b>{model.pipeline_name}</b> modeli, eğitimde kullanılan verilerin sonunu baz alarak bir sonraki zaman adımını otomatik olarak tahmin edecektir.
-                <br/><br/>Devam etmek için "Tahmin Et" butonuna tıklayın.
-              </p>
-              {isLoading && <p className={styles.loadingText}>Tahmin yapılıyor...</p>}
-            </>
-          )}
+          {isLoading && <LoadingSpinner message="Tahmin hesaplanıyor..." />}
           
-          {predictionResult && chartData && (
+          {!isLoading && !predictionResult && (
+             <p className={styles.infoText}>
+                <b>{model.pipeline_name}</b> modeli için tahmin sonucu alınamadı.
+             </p>
+          )}
+
+          {!isLoading && predictionResult && chartData && (
             <div className={styles.resultContainer}>
               <div className={styles.resultHeader}>
                 <p>Modelin Tahmini ({predictionResult.target_col || 'Değer'})</p>
@@ -135,10 +150,11 @@ function PredictionModal({ model, onClose }) {
             </div>
           )}
         </div>
+
         <footer className={styles.footer}>
-          <button className={styles.buttonSecondary} onClick={onClose} disabled={isLoading}>İptal</button>
+          <button className={styles.buttonSecondary} onClick={onClose} disabled={isLoading}>Kapat</button>
           <button className="button-primary" onClick={handlePredict} disabled={isLoading || !isTimeSeries}>
-            {isLoading ? 'Hesaplanıyor...' : (predictionResult ? 'Yeniden Tahmin Et' : 'Tahmin Et')}
+            {isLoading ? 'Hesaplanıyor...' : 'Yeniden Tahmin Et'}
           </button>
         </footer>
       </div>

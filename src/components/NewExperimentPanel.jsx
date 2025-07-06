@@ -1,10 +1,8 @@
-// dashboard/src/components/NewExperimentPanel.jsx
-
 import React from 'react';
 import PropTypes from 'prop-types';
 import NewExperimentFormContent from '../pages/NewExperiment';
-// YENİ: CSS Modülü yerine standart CSS importu
-import './NewExperimentPanel.css'; 
+// DÜZELTME: Tutarlılık için CSS Modülü'ne geçildi.
+import styles from './NewExperimentPanel.module.css';
 
 function CloseIcon() {
   return (
@@ -27,7 +25,6 @@ function NewExperimentPanel({ isOpen, onClose, onExperimentStarted }) {
 
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
-      // Panelin içeriğine focus vermek için
       setTimeout(() => panelRef.current?.focus(), 50);
     }
 
@@ -42,9 +39,8 @@ function NewExperimentPanel({ isOpen, onClose, onExperimentStarted }) {
     }
   };
 
-  // isOpen durumuna göre class'ları dinamik olarak ata
-  const overlayClasses = `panel-overlay ${isOpen ? 'open' : ''}`;
-  const panelClasses = `panel ${isOpen ? 'open' : ''}`;
+  const overlayClasses = `${styles.panelOverlay} ${isOpen ? styles.open : ''}`;
+  const panelClasses = `${styles.panel} ${isOpen ? styles.open : ''}`;
 
   return (
     <div className={overlayClasses} onClick={handleOverlayClick}>
@@ -56,14 +52,13 @@ function NewExperimentPanel({ isOpen, onClose, onExperimentStarted }) {
         aria-labelledby="new-experiment-title"
         tabIndex="-1" 
       >
-        <div className="panel-header">
+        <div className={styles.panelHeader}>
           <h2 id="new-experiment-title">Yeni Deney Başlat</h2>
-          <button className="close-button" onClick={onClose} title="Kapat (Esc)">
+          <button className={styles.closeButton} onClick={onClose} title="Kapat (Esc)">
             <CloseIcon />
           </button>
         </div>
-        <div className="panel-body">
-          {/* Form içeriği artık bir prop alarak panelin kapandığını bilecek */}
+        <div className={styles.panelBody}>
           <NewExperimentFormContent 
             onExperimentStarted={onExperimentStarted} 
           />
