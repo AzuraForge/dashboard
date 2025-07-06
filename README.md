@@ -22,12 +22,22 @@ Bu arayüz, AzuraForge ekosisteminin bir parçasıdır. Projenin genel mimarisin
 
 Bu projeyi yerel ortamda çalıştırmak için, ana `platform` reposundaki **[Geliştirme Rehberi](https://github.com/AzuraForge/platform/blob/main/docs/DEVELOPMENT_GUIDE.md)**'ni takip ederek genel ortamı kurun.
 
-Proje bağımlılıkları kurulduktan sonra, aşağıdaki komutlarla geliştirme sunucusunu başlatabilirsiniz:
+1.  **Ortam Değişkenleri Dosyasını Oluşturun:**
+    Bu dizinde, `.env.example` dosyasını kopyalayarak `.env` adında yeni bir dosya oluşturun. Yerel geliştirme için varsayılan ayarlar genellikle yeterlidir.
+    ```bash
+    cp .env.example .env
+    ```
 
-```bash
-# dashboard/ kök dizinindeyken
-npm run dev
-```
+2.  **Proje Bağımlılıklarını Kurun:**
+    ```bash
+    npm install
+    ```
+
+3.  **Geliştirme Sunucusunu Başlatın:**
+    ```bash
+    # dashboard/ kök dizinindeyken
+    npm run dev
+    ```
 Uygulama `http://localhost:5173` adresinde erişilebilir olacaktır.
 
-**Not:** Dashboard'un tam olarak çalışabilmesi için `api` servisinin `http://localhost:8000` adresinde çalışıyor olması gerekmektedir.
+**Not:** Dashboard'un tam olarak çalışabilmesi için `api` servisinin, `.env` dosyanızda belirttiğiniz adreste (`VITE_API_BASE_URL`) çalışıyor olması gerekmektedir.

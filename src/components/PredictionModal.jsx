@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useContext } from 'react';
 import PropTypes from 'prop-types';
-import axios from 'axios';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 
-import { API_BASE_URL } from '../services/api';
+// === DEĞİŞİKLİK: Axios import'u kaldırıldı, merkezi API fonksiyonu import edildi ===
+import { predictFromExperiment } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './PredictionModal.module.css';
-import { useAuth } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 
 // Chart.js bileşenlerini kaydet
@@ -16,7 +15,6 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 function PredictionModal({ model, onClose }) {
   const [predictionResult, setPredictionResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { token } = useAuth();
   const { theme } = useContext(ThemeContext);
 
   const isTimeSeries = model.pipeline_name.includes('forecaster') || model.pipeline_name.includes('predictor');
@@ -25,9 +23,10 @@ function PredictionModal({ model, onClose }) {
     setIsLoading(true);
     setPredictionResult(null);
     try {
-      const response = await axios.post(`${API_BASE_URL}/experiments/${model.experiment_id}/predict`, {}, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const payload = isTimeSeries ? {} : { data: [] };
+      // === DEĞİŞİKLİK: Artık merkezi API fonksiyonunu kullanıyoruz ===
+      // Authorization başlığı ve URL, `api.js` içindeki `apiClient` tarafından yönetiliyor.
+      const response = await predictFromExperiment(model.experiment_id, payload);
       setPredictionResult(response.data);
     } catch (error) {
       handleApiError(error, "tahmin yapma");
@@ -43,27 +42,31 @@ function PredictionModal({ model, onClose }) {
     const gridColor = isDark ? '#334155' : '#e2e8f0';
     const textColor = isDark ? '#f1f5f9' : '#1e293b';
     const historyValues = Object.values(predictionResult.history);
-    const labels = Array.from({ length: historyValues.length + 1 }, (_, i) => `T-${historyValues.length - i -1}`).slice(1);
-    labels[labels.length -1] = "Tahmin";
+    
+    // Geçmiş verinin son 30 noktasını alarak grafiği daha okunabilir yapalım
+    const displayHistory = historyValues.slice(-30);
+    const labels = Array.from({ length: displayHistory.length }, (_, i) => `T-${displayHistory.length - i}`);
+    labels.push("Tahmin");
 
     const data = {
       labels,
       datasets: [
         {
           label: 'Geçmiş Veri',
-          data: historyValues,
+          data: displayHistory,
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.2)',
-          tension: 0.1,
+          tension: 0.2,
           fill: true,
         },
         {
           label: 'Tahmin',
-          data: [...Array(historyValues.length - 1).fill(null), historyValues[historyValues.length - 1], predictionResult.prediction],
+          // Grafiğin son geçmiş noktası ile tahmin noktasını birleştiren bir çizgi çiz
+          data: [...Array(displayHistory.length - 1).fill(null), displayHistory[displayHistory.length - 1], predictionResult.prediction],
           borderColor: '#22c55e',
-          backgroundColor: 'rgba(34, 197, 94, 0.5)',
           pointRadius: 5,
           pointBackgroundColor: '#22c55e',
+          type: 'line',
         }
       ]
     };
@@ -71,10 +74,32 @@ function PredictionModal({ model, onClose }) {
     const options = {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+            callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                        label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                        label += context.parsed.y.toFixed(4);
+                    }
+                    return label;
+                }
+            }
+        }
+      },
       scales: {
-        y: { grid: { color: gridColor }, ticks: { color: textColor } },
-        x: { grid: { color: gridColor }, ticks: { color: textColor } }
+        y: { 
+            grid: { color: gridColor, borderDash: [2, 4], drawTicks: false }, 
+            ticks: { color: textColor, padding: 10 } 
+        },
+        x: { 
+            grid: { display: false }, 
+            ticks: { color: textColor, font: { size: 10 } } 
+        }
       }
     };
 
@@ -116,7 +141,7 @@ function PredictionModal({ model, onClose }) {
         <footer className={styles.footer}>
           <button className={styles.buttonSecondary} onClick={onClose} disabled={isLoading}>İptal</button>
           <button className="button-primary" onClick={handlePredict} disabled={isLoading || !isTimeSeries}>
-            {isLoading ? 'Hesaplanıyor...' : 'Tahmin Et'}
+            {isLoading ? 'Hesaplanıyor...' : 'Yeniden Tahmin Et'}
           </button>
         </footer>
       </div>
