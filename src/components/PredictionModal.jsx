@@ -5,13 +5,11 @@ import { API_BASE_URL } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './PredictionModal.module.css';
 import { toast } from 'react-toastify';
-// === DEĞİŞİKLİK BURADA: Yetkilendirme için useAuth'u import ediyoruz ===
 import { useAuth } from '../context/AuthContext';
 
 function PredictionModal({ model, onClose }) {
   const [predictionResult, setPredictionResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  // === DEĞİŞİKLİK BURADA: Auth context'ten token'ı alıyoruz ===
   const { token } = useAuth();
 
   const isTimeSeries = model.pipeline_name.includes('forecaster') || model.pipeline_name.includes('predictor');
@@ -23,7 +21,6 @@ function PredictionModal({ model, onClose }) {
     try {
       const payload = isTimeSeries ? {} : { data: [] };
 
-      // === DEĞİŞİKLİK BURADA: API çağrısına Authorization başlığını ekliyoruz ===
       const response = await axios.post(
         `${API_BASE_URL}/experiments/${model.experiment_id}/predict`, 
         payload, 
@@ -64,9 +61,10 @@ function PredictionModal({ model, onClose }) {
 
           {isLoading && <p style={{textAlign: 'center', color: 'var(--text-color-darker)'}}>Tahmin yapılıyor...</p>}
 
+          {/* === DEĞİŞİKLİK BURADA: Sonuç gösterimini dinamik hale getiriyoruz === */}
           {predictionResult && (
             <div className={styles.result}>
-              <p>Modelin Bir Sonraki Adım İçin Tahmini</p>
+              <p>Modelin Bir Sonraki Adım İçin Tahmini ({predictionResult.target_col || 'Değer'})</p>
               <div className={styles.predictionValue}>
                 {(predictionResult.prediction || 0).toFixed(4)}
               </div>
