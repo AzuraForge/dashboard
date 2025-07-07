@@ -38,33 +38,26 @@ function PredictionModal({ model, onClose }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model.experiment_id]);
 
-  const { chartData, chartOptions } = useMemo(() => {
-    // Eğer sonuç yoksa veya sonuç içinde geçmiş veri yoksa, boş obje dön.
-    if (!predictionResult || !predictionResult.history) {
-      return { chartData: null, chartOptions: null };
+  const { chartData, chartOptions, hasChartData } = useMemo(() => {
+    // === KRİTİK DÜZELTME: Verinin varlığını ve geçerliliğini kontrol et ===
+    if (!predictionResult || !predictionResult.history || typeof predictionResult.history !== 'object' || Object.keys(predictionResult.history).length === 0) {
+      return { chartData: null, chartOptions: null, hasChartData: false };
     }
   
     const isDark = theme === 'dark';
     const gridColor = isDark ? '#334155' : '#e2e8f0';
     const textColor = isDark ? '#f1f5f9' : '#1e293b';
   
-    // --- GRAFİK MANTIĞI DÜZELTMESİ: API'den gelen gerçek tarihleri kullan ---
-    
-    // 1. API'den gelen history objesini [tarih, değer] dizisine çevir.
     const historyEntries = Object.entries(predictionResult.history);
     
-    // 2. Bu diziyi tarihe göre sırala (her ihtimale karşı).
     historyEntries.sort((a, b) => new Date(a[0]) - new Date(b[0]));
   
-    // 3. Geçmiş verinin son noktasını ve tarihini al.
     const lastHistoryEntry = historyEntries[historyEntries.length - 1];
     const lastDate = new Date(lastHistoryEntry[0]);
     
-    // 4. Tahmin için bir sonraki zaman adımını hesapla.
-    // İki nokta arasındaki zaman farkını kullanarak bir sonraki adımı tahmin et.
     const interval = historyEntries.length > 1 
       ? new Date(historyEntries[1][0]).getTime() - new Date(historyEntries[0][0]).getTime()
-      : 24 * 60 * 60 * 1000; // Varsayılan olarak 1 gün ekle.
+      : 24 * 60 * 60 * 1000; 
       
     const predictionDate = new Date(lastDate.getTime() + interval);
     
@@ -72,25 +65,24 @@ function PredictionModal({ model, onClose }) {
       datasets: [
         {
           label: 'Geçmiş Veri',
-          // API'den gelen her bir [tarih, değer] çiftini Chart.js formatına çevir.
           data: historyEntries.map(([dateStr, value]) => ({ x: new Date(dateStr).getTime(), y: value })),
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.2)',
           tension: 0.2,
           fill: true,
-          pointRadius: 0,
+          pointRadius: 1, // daha görünür noktalar
+          pointHoverRadius: 4,
         },
         {
           label: 'Tahmin',
-          // Tahmin çizgisini, geçmişin son noktasından tahmin edilen noktaya çiz.
           data: [
             { x: lastDate.getTime(), y: lastHistoryEntry[1] },
             { x: predictionDate.getTime(), y: predictionResult.prediction }
           ],
           borderColor: '#22c55e',
-          pointRadius: 5,
+          pointRadius: 6, // daha belirgin nokta
           pointBackgroundColor: '#22c55e',
-          borderWidth: 3, // Daha belirgin hale getirildi
+          borderWidth: 3,
           type: 'line',
         }
       ]
@@ -107,7 +99,6 @@ function PredictionModal({ model, onClose }) {
             bodyColor: textColor,
             callbacks: {
               title: function(tooltipItems) {
-                // Tooltip başlığında tarihi daha okunabilir formatta göster
                 const date = new Date(tooltipItems[0].parsed.x);
                 return date.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' });
               }
@@ -121,7 +112,6 @@ function PredictionModal({ model, onClose }) {
         },
         x: { 
             type: 'time',
-            // Zaman ekseninin nasıl gösterileceğini ayarla
             time: { unit: 'day', tooltipFormat: 'PPp', displayFormats: { day: 'd MMM' } },
             grid: { display: false }, 
             ticks: { color: textColor, font: { size: 10 }, maxRotation: 0, autoSkip: true, padding: 10 } 
@@ -129,7 +119,7 @@ function PredictionModal({ model, onClose }) {
       }
     };
   
-    return { chartData: data, chartOptions: options };
+    return { chartData: data, chartOptions: options, hasChartData: true };
   
   }, [predictionResult, theme]);
 
@@ -150,7 +140,7 @@ function PredictionModal({ model, onClose }) {
              </div>
           )}
 
-          {!isLoading && predictionResult && chartData && (
+          {!isLoading && predictionResult && (
             <div className={styles.resultContainer}>
               <div className={styles.resultHeader}>
                 <p>Modelin Tahmini ({predictionResult.target_col || 'Değer'})</p>
@@ -159,7 +149,14 @@ function PredictionModal({ model, onClose }) {
                 </div>
               </div>
               <div className={styles.chartContainer}>
-                <Line options={chartOptions} data={chartData} />
+                {hasChartData ? (
+                  <Line options={chartOptions} data={chartData} />
+                ) : (
+                  <div className={styles.noChartData}>
+                    <p>Grafik için geçmiş verisi bulunamadı.</p>
+                    <span>Bu, genellikle anlık olarak üretilen veya zaman serisi olmayan modeller için normal bir durumdur.</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

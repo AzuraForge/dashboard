@@ -18,7 +18,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   width: 90%;
-  max-width: 650px; /* Genişletildi */
+  max-width: 650px;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
@@ -45,14 +45,6 @@
   overflow-y: auto;
 }
 
-.loadingText {
-  text-align: center;
-  color: var(--text-color-darker);
-  font-style: italic;
-  padding: 2rem 0;
-}
-
-/* === YENİ STİLLER BAŞLIYOR === */
 .resultContainer {
   display: flex;
   flex-direction: column;
@@ -84,7 +76,30 @@
   height: 250px;
   position: relative;
 }
-/* === YENİ STİLLER BİTİYOR === */
+
+/* === YENİ === */
+.noChartData {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  background-color: var(--hover-bg);
+}
+.noChartData p {
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 0.5rem 0;
+}
+.noChartData span {
+  font-size: 0.85em;
+  color: var(--text-color-darker);
+}
+/* === BİTTİ === */
 
 .footer {
   display: flex;

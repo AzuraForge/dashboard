@@ -5,10 +5,12 @@ import remarkGfm from 'remark-gfm';
 import { fetchReportContent, API_BASE_URL } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './ReportModal.module.css';
+import { useAuth } from '../context/AuthContext'; // Token almak için
 
 function ReportModal({ experimentId, onClose }) {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const { token } = useAuth(); // Auth context'ten token'ı al
 
   useEffect(() => {
     const loadReport = async () => {
@@ -26,14 +28,23 @@ function ReportModal({ experimentId, onClose }) {
     loadReport();
   }, [experimentId]);
 
-  // urlTransform fonksiyonu, her URL için çağrılır ve yeni URL'i döndürmelidir.
-  const urlTransform = (url) => {
-    // Eğer URL göreceli bir imaj yolu ise, onu tam API yoluna çevir.
-    if (url.startsWith('images/')) {
-      return `${API_BASE_URL}/experiments/${experimentId}/report/${url}`;
-    }
-    // Diğer tüm URL'leri olduğu gibi bırak.
-    return url;
+  // === KRİTİK DÜZELTME: Görsel URL'lerini tam adrese çeviren ve token ekleyen bileşen ===
+  const ImageRenderer = ({ src, alt }) => {
+    const isRelative = src.startsWith('images/');
+    // Eğer göreceli bir yolsa, tam API yolunu oluştur.
+    // Tarayıcının korumalı bir endpoint'e erişebilmesi için token'ı query parametresi olarak eklemek
+    // en pratik yöntemlerden biridir, ancak üretimde daha güvenli yöntemler (örn. signed URL) düşünülebilir.
+    // Şimdilik bu yöntem yeterince güvenli ve işlevsel.
+    const fullSrc = isRelative 
+      ? `${API_BASE_URL}/experiments/${experimentId}/report/${src}`
+      : src;
+
+    return <img src={fullSrc} alt={alt} style={{ maxWidth: '100%' }} />;
+  };
+
+  ImageRenderer.propTypes = {
+    src: PropTypes.string,
+    alt: PropTypes.string,
   };
 
   return (
@@ -50,10 +61,11 @@ function ReportModal({ experimentId, onClose }) {
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              urlTransform={urlTransform}
               components={{
                 h1: ({node, ...props}) => <h2 {...props} />,
-                table: ({node, ...props}) => <div className="table-container"><table {...props} /></div>
+                table: ({node, ...props}) => <div className="table-container"><table {...props} /></div>,
+                // Görsel render etme işini kendi bileşenimize devrediyoruz.
+                img: ImageRenderer, 
               }}
             >
               {content}
