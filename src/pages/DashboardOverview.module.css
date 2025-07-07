@@ -1,6 +1,6 @@
 .pageLayout {
     display: grid;
-    /* --- DEĞİŞİKLİK: Kenar çubuğu için minmax kullanımı --- */
+    /* Kenar çubuğu için minmax kullanımı, esneklik sağlar */
     grid-template-columns: minmax(0, 1fr) 320px;
     gap: 30px;
     align-items: flex-start;
@@ -9,7 +9,7 @@
 /* === YENİ: Duyarlı (Responsive) tasarım için medya sorgusu === */
 @media (max-width: 1200px) {
     .pageLayout {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Tek sütunlu layout'a geç */
     }
     .sidebarColumn {
         display: none; /* Geniş ekranlarda sepeti gizle */
@@ -22,7 +22,7 @@
 .stateMessage { text-align: center; padding: 40px; color: var(--text-color-darker); font-size: 1.1rem; }
 .errorMessage { color: var(--error-color); font-weight: 500; }
 
-/* Karşılaştırma Sepeti Stilleri (Değişiklik yok) */
+/* Karşılaştırma Sepeti Stilleri */
 .basket { background-color: var(--content-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 20px; }
 .basketTitle { margin: 0 0 15px 0; font-size: 1.1rem; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
 .basketEmpty { font-size: 0.9rem; color: var(--text-color-darker); text-align: center; padding: 20px 0; font-style: italic; }

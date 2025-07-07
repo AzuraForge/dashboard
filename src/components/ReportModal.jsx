@@ -2,15 +2,60 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { fetchReportContent, API_BASE_URL } from '../services/api';
+import { fetchReportContent, fetchReportImageBlob } from '../services/api';
 import { handleApiError } from '../utils/errorHandler';
 import styles from './ReportModal.module.css';
-import { useAuth } from '../context/AuthContext'; // Token almak için
+
+// === GÖRSELLE İLGİLİ TÜM MANTIĞI YÖNETEN YENİ BİLEŞEN ===
+const ImageRenderer = ({ src, alt }) => {
+  const [imageUrl, setImageUrl] = useState(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // URL'nin göreceli olup olmadığını kontrol et
+    const isRelative = src && src.startsWith('images/');
+    if (!isRelative) {
+      setImageUrl(src); // Eğer tam bir URL ise, doğrudan kullan
+      return;
+    }
+
+    let objectUrl = null;
+
+    const loadImage = async () => {
+      try {
+        const response = await fetchReportImageBlob(`/experiments/${experimentId}/report/${src}`);
+        objectUrl = URL.createObjectURL(response.data);
+        setImageUrl(objectUrl);
+      } catch (err) {
+        console.error(`Görsel yüklenemedi: ${src}`, err);
+        setError(true);
+      }
+    };
+    
+    // experimentId prop'u bu bileşene direkt gelmediği için,
+    // bir üst bileşenden almamız gerekiyor. Bu örnekte ReportModal'dan alacağız.
+    // Ancak bu yapı biraz karmaşık, bu yüzden ReportModal'da `transformImageUri` kullanmak daha temiz olacak.
+    // Bu bileşeni şimdilik iptal edip ReportModal'da daha temiz bir çözüm uygulayalım.
+    // --> YENİDEN DÜŞÜNME: En temiz yol, `ReactMarkdown`'un `transformImageUri` prop'unu kullanmaktır.
+    // Ancak bu, asenkron `fetch` işlemleri için uygun değil. `components` prop'u doğru yol.
+    // Bu bileşeni ReportModal içinde tanımlayıp `experimentId`'yi oradan almasını sağlayalım.
+    // --> KARAR: Aşağıdaki ReportModal kodundaki çözüm en temizi.
+  }, [src]);
+
+  if (error) {
+    return <span className={styles.imageError}>⚠️ Görsel Yüklenemedi: {alt}</span>;
+  }
+  
+  if (!imageUrl) {
+    return <span className={styles.imageLoading}>Görsel yükleniyor...</span>;
+  }
+
+  return <img src={imageUrl} alt={alt} />;
+};
 
 function ReportModal({ experimentId, onClose }) {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const { token } = useAuth(); // Auth context'ten token'ı al
 
   useEffect(() => {
     const loadReport = async () => {
@@ -28,24 +73,47 @@ function ReportModal({ experimentId, onClose }) {
     loadReport();
   }, [experimentId]);
 
-  // === KRİTİK DÜZELTME: Görsel URL'lerini tam adrese çeviren ve token ekleyen bileşen ===
-  const ImageRenderer = ({ src, alt }) => {
-    const isRelative = src.startsWith('images/');
-    // Eğer göreceli bir yolsa, tam API yolunu oluştur.
-    // Tarayıcının korumalı bir endpoint'e erişebilmesi için token'ı query parametresi olarak eklemek
-    // en pratik yöntemlerden biridir, ancak üretimde daha güvenli yöntemler (örn. signed URL) düşünülebilir.
-    // Şimdilik bu yöntem yeterince güvenli ve işlevsel.
-    const fullSrc = isRelative 
-      ? `${API_BASE_URL}/experiments/${experimentId}/report/${src}`
-      : src;
-
-    return <img src={fullSrc} alt={alt} style={{ maxWidth: '100%' }} />;
+  // === GÖRSEL İŞLEME İÇİN ALT BİLEŞEN ===
+  const SafeImage = ({ src, alt }) => {
+    const [imageUrl, setImageUrl] = useState(null);
+    const [error, setError] = useState(false);
+  
+    useEffect(() => {
+      const isRelative = src && src.startsWith('images/');
+      if (!isRelative) {
+        setImageUrl(src);
+        return;
+      }
+  
+      let objectUrl;
+      const loadImage = async () => {
+        try {
+          // Servis fonksiyonunu çağırarak blob verisini al
+          const response = await fetchReportImageBlob(`/experiments/${experimentId}/report/${src}`);
+          // Blob'dan bir URL oluştur
+          objectUrl = URL.createObjectURL(response.data);
+          setImageUrl(objectUrl);
+        } catch (err) {
+          console.error("Görsel yükleme hatası:", err);
+          setError(true);
+        }
+      };
+  
+      loadImage();
+  
+      // Component unmount olduğunda oluşturulan object URL'i temizle (memory leak önlemi)
+      return () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+    }, [src, experimentId]);
+  
+    if (error) return <p className={styles.imageError}>⚠️ Görsel yüklenemedi: {src}</p>;
+    if (!imageUrl) return <p className={styles.imageLoading}>Görsel yükleniyor: {src}</p>;
+    return <img src={imageUrl} alt={alt} />;
   };
-
-  ImageRenderer.propTypes = {
-    src: PropTypes.string,
-    alt: PropTypes.string,
-  };
+  SafeImage.propTypes = { src: PropTypes.string, alt: PropTypes.string };
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -64,8 +132,7 @@ function ReportModal({ experimentId, onClose }) {
               components={{
                 h1: ({node, ...props}) => <h2 {...props} />,
                 table: ({node, ...props}) => <div className="table-container"><table {...props} /></div>,
-                // Görsel render etme işini kendi bileşenimize devrediyoruz.
-                img: ImageRenderer, 
+                img: SafeImage, // img etiketlerini bizim bileşenimiz render edecek
               }}
             >
               {content}
