@@ -6,18 +6,24 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import 'chartjs-adapter-date-fns';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import styles from './ComparisonView.module.css';
-import { ThemeContext } from '../context/ThemeContext'; // ThemeContext'i import et
+import { ThemeContext } from '../context/ThemeContext';
 
-// Chart.js eklentilerini doğru şekilde kaydet
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, TimeScale, Filler, zoomPlugin);
 
 const chartColors = ['#42b983', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#7e22ce', '#15803d'];
 
-// Helper fonksiyonlar
 const safeGet = (obj, path, defaultValue = 'N/A') => {
   if (!obj || typeof path !== 'string') return defaultValue;
   const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
   return value !== undefined && value !== null ? value : defaultValue;
+};
+
+// === YENİ YARDIMCI FONKSİYON ===
+const safeToFixed = (value, digits) => {
+  const num = Number(value);
+  return (typeof num === 'number' && !isNaN(num)) 
+    ? num.toFixed(digits) 
+    : 'N/A';
 };
 
 const analyzeMetrics = (experiments, metricPath, mode = 'min') => {
@@ -30,7 +36,7 @@ const analyzeMetrics = (experiments, metricPath, mode = 'min') => {
 };
 
 function ComparisonView({ experiments, title, onClose }) {
-  const { theme } = useContext(ThemeContext); // Mevcut temayı context'ten al
+  const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -159,9 +165,9 @@ function ComparisonView({ experiments, title, onClose }) {
                         </td>
                         <td className={styles.numericCell}>{safeGet(exp, 'config_summary.lr', 'N/A')}</td>
                         <td className={styles.numericCell}>{safeGet(exp, 'config.model_params.hidden_size', 'N/A')}</td>
-                        <td className={`${styles.numericCell} ${getCellStyle('loss')}`}>{safeGet(exp, 'results.final_loss', 'N/A').toFixed ? safeGet(exp, 'results.final_loss').toFixed(6) : 'N/A'}</td>
-                        <td className={`${styles.numericCell} ${getCellStyle('r2')}`}>{safeGet(exp, 'results.metrics.r2_score', 'N/A').toFixed ? safeGet(exp, 'results.metrics.r2_score').toFixed(4) : 'N/A'}</td>
-                        <td className={`${styles.numericCell} ${getCellStyle('mae')}`}>{safeGet(exp, 'results.metrics.mae', 'N/A').toFixed ? safeGet(exp, 'results.metrics.mae').toFixed(4) : 'N/A'}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('loss')}`}>{safeToFixed(safeGet(exp, 'results.final_loss', null), 6)}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('r2')}`}>{safeToFixed(safeGet(exp, 'results.metrics.r2_score', null), 4)}</td>
+                        <td className={`${styles.numericCell} ${getCellStyle('mae')}`}>{safeToFixed(safeGet(exp, 'results.metrics.mae', null), 4)}</td>
                       </tr>
                     )
                 })}

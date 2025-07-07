@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import Plot from 'react-plotly.js';
 import { get, isObject } from 'lodash';
 import { ThemeContext } from '../context/ThemeContext';
-import styles from './ComparisonView.module.css'; // Mevcut modal stilini kullanabiliriz
+import styles from './ComparisonView.module.css';
 
 function BatchComparisonModal({ experiments, title, onClose }) {
   const { theme } = useContext(ThemeContext);
@@ -24,11 +24,8 @@ function BatchComparisonModal({ experiments, title, onClose }) {
   const { plotData, plotLayout } = useMemo(() => {
     if (!experiments || experiments.length < 1) return { plotData: [], plotLayout: {} };
 
-    // Değişen hiperparametreleri ve metrikleri dinamik olarak bul
     const varyingParams = new Set();
     const baseConfig = experiments[0].config;
-
-    // Sadece training_params ve model_params içindeki değişiklikleri ara
     const paramSections = ['training_params', 'model_params'];
     
     for (const exp of experiments.slice(1)) {
@@ -43,26 +40,55 @@ function BatchComparisonModal({ experiments, title, onClose }) {
         }
     }
     
-    const dimensions = Array.from(varyingParams).map(path => ({
-      label: path.split('.').pop(),
-      values: experiments.map(exp => get(exp.config, path))
-    }));
+    const rawDimensions = [];
 
-    // Performans metriklerini ekle
+    Array.from(varyingParams).forEach(path => {
+        rawDimensions.push({
+            label: path.split('.').pop(),
+            values: experiments.map(exp => get(exp.config, path))
+        });
+    });
+
     const metrics = [
-      { key: 'results.metrics.r2_score', label: 'R² Skoru' },
-      { key: 'results.metrics.mae', label: 'MAE' },
-      { key: 'results.final_loss', label: 'Final Kayıp' }
+      { key: 'results.metrics.r2_score', label: 'R² Skoru', higherIsBetter: true },
+      { key: 'results.metrics.mae', label: 'MAE', higherIsBetter: false },
+      { key: 'results.final_loss', label: 'Final Kayıp', higherIsBetter: false }
     ];
 
     metrics.forEach(metric => {
       const values = experiments.map(exp => get(exp, metric.key, null));
       if (values.some(v => typeof v === 'number')) {
-        dimensions.push({ label: metric.label, values });
+        rawDimensions.push({ label: metric.label, values, higherIsBetter: metric.higherIsBetter });
       }
     });
 
-    // Renk skalası için final kayıp değerini kullan
+    const normalizedDimensions = rawDimensions.map(dim => {
+        const numericValues = dim.values.map(Number).filter(v => !isNaN(v));
+        if(numericValues.length === 0) return null; // Eğer sayısal değer yoksa bu boyutu atla
+
+        const min = Math.min(...numericValues);
+        const max = Math.max(...numericValues);
+        const range = max - min;
+        
+        let normalizedValues;
+        if (range > 0) {
+            normalizedValues = numericValues.map(v => (v - min) / range);
+            if (dim.higherIsBetter === false) {
+                normalizedValues = normalizedValues.map(v => 1 - v);
+            }
+        } else {
+            normalizedValues = numericValues.map(() => 0.5); 
+        }
+
+        return {
+            label: dim.label,
+            values: normalizedValues,
+            range: [min, max],
+            tickvals: [0, 0.5, 1],
+            ticktext: [min.toPrecision(3), ((min + max) / 2).toPrecision(3), max.toPrecision(3)]
+        };
+    }).filter(Boolean); // null olanları filtrele
+
     const colorValues = experiments.map(exp => exp.results.final_loss || 0);
 
     const data = [{
@@ -80,7 +106,7 @@ function BatchComparisonModal({ experiments, title, onClose }) {
           tickfont: { color: theme === 'dark' ? '#94a3b8' : '#475569' },
         }
       },
-      dimensions: dimensions,
+      dimensions: normalizedDimensions,
     }];
     
     const layout = {
