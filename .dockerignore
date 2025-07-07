@@ -1,29 +1,21 @@
-# DOSYA: dashboard/.dockerignore
+# Docker build context'ine dahil edilmeyecek dosyalar ve klasörler.
+# Bu, host'taki (örn: Windows) bağımlılıkların, konteyner (Linux)
+# build sürecini kirletmesini engeller.
 
-# Git klasörünü ve dosyalarını hariç tut
-.git
-.gitignore
-
-# Node.js bağımlılık klasörünü hariç tut.
-# Bu en önemlisi! Bağımlılıklar Dockerfile içinde kurulacak.
+# Bağımlılıklar
 node_modules
 
-# Derlenmiş çıktı klasörünü hariç tut
+# Lock dosyası (konteyner kendi ortamı için sıfırdan oluşturmalı)
+package-lock.json
+
+# Build çıktıları
 dist
-build
+coverage
 
-# Log dosyaları
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Loglar ve geçici dosyalar
+*.log
+.DS_Store
 
-# Ortam değişkenleri dosyaları (güvenlik için)
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Editör ve IDE konfigürasyon dosyaları
+# IDE ve yerel konfigürasyon
 .vscode
 .idea
